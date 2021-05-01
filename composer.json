@@ -15,7 +15,8 @@
     ],
     "require": {
         "php": "^8",
-        "simbiat/database": "^2.0.0+20210311"
+        "simbiat/database": "^2.0.0+20210311",
+        "phpmailer/phpmailer": "^6"
     },
     "autoload": {
         "psr-4": {
