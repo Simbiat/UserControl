@@ -1,0 +1,29 @@
+{
+    "name": "simbiat/usercontrol",
+    "type": "library",
+    "keywords": ["user","php","control","management"],
+    "description": "Generic user mamagement library",
+    "homepage": "https://github.com/Simbiat/usercontrol",
+    "license": "AGPL-3.0-or-later",
+    "authors": [
+        {
+            "name": "Dmitry Kustov",
+            "email": "simbiat@outlook.com",
+            "homepage": "https://simbiat.ru",
+            "role": "Developer"
+        }
+    ],
+    "require": {
+        "php": "^8",
+        "simbiat/database": "^2.0.0+20210311",
+    },
+    "autoload": {
+        "psr-4": {
+            "Simbiat\\usercontrol\\": "src/"
+        }
+    },
+	"support": {
+		"issues": "https://github.com/Simbiat/usercontrol/issues",
+		"source": "https://github.com/Simbiat/usercontrol"
+	}
+}
