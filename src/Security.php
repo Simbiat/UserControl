@@ -35,18 +35,14 @@ class Security
     {
         #Check if behind proxy
         if (!empty($_SERVER['HTTP_X_FORWARDED_FOR'])) {
-            #Get list of known proxies. This is optional, but keeping a list may improve security somewhat
-            $knownproxies = self::$dbcontroller->selectColumn('SELECT `ip` FROM `'.self::$dbprefix.'proxies`');
-            #Get list of IPs
-            #Logic based on https://raw.githubusercontent.com/zendframework/zend-http/master/src/PhpEnvironment/RemoteAddress.php
-            $ips = array_diff(array_map('trim', explode(',', $_SERVER['HTTP_X_FORWARDED_FOR'])), $knownproxies);
+            #Get list of IPs, that do validate as proper IP
+            $ips = array_filter(array_map('trim', explode(',', $_SERVER['HTTP_X_FORWARDED_FOR'])), function($value) {
+                return filter_var($value, FILTER_VALIDATE_IP);
+            });
             #Check if any are left
             if (!empty($ips)) {
                 #Get the right-most IP
-                $ip = filter_var(array_pop($ips), FILTER_VALIDATE_IP);
-                if ($ip !== false) {
-                    return $ip;
-                }
+                return array_pop($ips);
             }
         }
         #Check if REMOTE_ADDR is set (it's more appropriate and secure to use it)
