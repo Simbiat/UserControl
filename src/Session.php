@@ -2,7 +2,7 @@
 declare(strict_types=1);
 namespace Simbiat\usercontrol;
 
-class Session implements \SessionHandlerInterface, \SessionIdInterface
+class Session implements \SessionHandlerInterface, \SessionIdInterface, \SessionUpdateTimestampHandlerInterface
 {    
     #Attach common settings
     use \Simbiat\usercontrol\Common;
@@ -62,8 +62,12 @@ class Session implements \SessionHandlerInterface, \SessionIdInterface
         }
     }
     
-    public function open($savePath, $sessionName)
+    ##########################
+    #\SessionHandlerInterface#
+    ##########################
+    public function open(string $path, string $name)
     {
+        #If controller was initialized - session is ready
         if (self::$dbcontroller === NULL) {
             return false;
         } else {
@@ -73,60 +77,55 @@ class Session implements \SessionHandlerInterface, \SessionIdInterface
     
     public function close()
     {
+        #No need to do anything at this point
         return true;
     }
     
-    public function read($id): string
+    public function read(string $id): string
     {
-        $session = self::$dbcontroller->selectRow('SELECT `data` FROM `'.self::$dbprefix.'sessions` WHERE `sessionid` = :id', array(':id'=>$id));
+        #Get session data
+        $session = self::$dbcontroller->selectValue('SELECT `data` FROM `'.self::$dbprefix.'sessions` WHERE `sessionid` = :id', [':id'=>$id]);
         if (empty($session)) {
             return '';
         } else {
-            return $this->security->decrypt($session[0]['data']);
+            return $this->security->decrypt($session['data']);
         }
     }
     
-    public function write($id, $data): bool
+    public function write(string $id, string $data): bool
     {
-        $data = $this->security->encrypt($data);
-        $bindings = array(':id'=>$id,':data'=>$data);
-        $extrafields = '';
-        $bindings[':viewing'] = rawurldecode($_SERVER['REQUEST_URI']);
-        $extrafields .= ', `viewing`=:viewing';
-        if (!isset($GLOBALS['twigparameters']['bot'])) {
-            $bot = 0;
-        } else {
-            $bot = (int)$GLOBALS['twigparameters']['bot'];
-            if ($bot !== 1 && $bot !== 0) {
-                $bot = 0;
-            }
-        }
-        if (!empty($GLOBALS['twigparameters']['botname'])) {
-            $bindings[':username'] = $GLOBALS['twigparameters']['botname'];
-            $extrafields .= ', `username`=:username';
-        } else {
-            if (!empty($_SESSION['username'])) {
-                $bindings[':username'] = $_SESSION['username'];
-                $extrafields .= ', `username`=:username';
-            }
-        }
-        if (self::$dbcontroller->query('INSERT INTO `'.self::$dbprefix.'sessions` SET `sessionid`=:id, `bot`='.$bot.', `data`=:data'.$extrafields.' ON DUPLICATE KEY UPDATE `time`=UTC_TIMESTAMP(), `bot`='.$bot.', `data`=:data'.$extrafields, $bindings)) {
+        #Check if bot
+        $bot = $this->isBot();
+        #Write data
+        if (self::$dbcontroller->query(
+            'INSERT INTO `'.self::$dbprefix.'sessions` SET `sessionid`=:id, `bot`=:bot, `data`=:data, `viewing`=:viewing, `username`=:username ON DUPLICATE KEY UPDATE `time`=UTC_TIMESTAMP(), `bot`=:bot, `data`=:data, `viewing`=:viewing, `username`=:username;',
+            [
+                ':id' => $id,
+                ':data' => [
+                    (empty($data) ? '' : $this->security->encrypt($data)),
+                    'string',
+                ],
+                #What page is being viewed
+                ':viewing' => rawurldecode((empty($_SERVER['REQUEST_URI']) ? 'index.php' : $_SERVER['REQUEST_URI'])),
+                ':bot' => ($bot === false ? 0 : 1),
+                ':username' => [
+                    (empty($_SESSION['username']) ? ($bot === false ? NULL : $bot) : $_SESSION['username']),
+                    (empty($_SESSION['username']) ? ($bot === false ? 'null' : 'string') : 'string'),
+                ],
+            ]
+        )) {
             return true;
         } else {
             return false;
         }
     }
     
-    public function destroy($id): bool
+    public function destroy(string $id): bool
     {
-        if (self::$dbcontroller->query('DELETE FROM `'.self::$dbprefix.'sessions` WHERE `sessionid`=:id', array(':id'=>$id))) {
-            return true;
-        } else {
-            return false;
-        }
+        return self::$dbcontroller->query('DELETE FROM `'.self::$dbprefix.'sessions` WHERE `sessionid`=:id', [':id'=>$id]);
     }
     
-    public function gc($maxlifetime): bool
+    public function gc(int $maxlifetime): bool
     {
         if (self::$dbcontroller->query('DELETE FROM `'.self::$dbprefix.'sessions` WHERE `time` < FROM_UNIXTIME('.(time()-$this->sessionLife).')')) {
             return true;
@@ -135,9 +134,45 @@ class Session implements \SessionHandlerInterface, \SessionIdInterface
         }
     }
     
+    #####################
+    #\SessionIdInterface#
+    #####################
     public function create_sid(): string
     {
         return session_create_id();
+    }
+    
+    #########################################
+    #\SessionUpdateTimestampHandlerInterface#
+    #########################################
+    public function validateId(string $id): bool
+    {
+        return self::$dbcontroller->check('SELECT `sessionid` FROM `'.self::$dbprefix.'sessions` WHERE `sessionid` = :id;', [':id'=>$id]);
+    }
+    
+    public function updateTimestamp(string $id, string $data): string
+    {
+        return self::$dbcontroller->query('UPDATE `'.self::$dbprefix.'sessions` SET `time`= UTC_TIMESTAMP() WHERE `sessionid` = :id;', [':id'=>$id]);
+    }
+    
+    #Check if bot
+    private function isBot(): bool|string
+    {
+        #Check if User Agent is present
+        if (empty($_SERVER['HTTP_USER_AGENT'])) {
+            return false;
+        }
+        #Initialize device detector
+        $dd = (new \DeviceDetector\Parser\Bot());
+        $dd->setUserAgent($_SERVER['HTTP_USER_AGENT']);
+        $bot = $dd->parse();
+        if ($bot === NULL) {
+            #Not a bot
+            return false;
+        } else {
+            #Bot
+            return $bot['name'];
+        }
     }
 }
 ?>

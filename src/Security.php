@@ -100,13 +100,19 @@ class Security
     #Function to encrypt stuff
     public function encrypt(string $data): string
     {
-        return base64_encode(openssl_encrypt($data, 'AES-256-GCM', $this->aesSettings['passphrase'], OPENSSL_RAW_DATA, $this->aesSettings['vector'], $this->aesSettings['tag'], '', 16));
+        if (empty($data)) {
+            return '';
+        }
+        return base64_encode(openssl_encrypt($data, 'AES-256-GCM', hex2bin($this->aesSettings['passphrase']), OPENSSL_RAW_DATA, hex2bin($this->aesSettings['vector']), hex2bin($this->aesSettings['tag']), '', 16));
     }
     
     #Function to decrypt stuff
     public function decrypt(string $data): string
     {
-        return openssl_decrypt(base64_encode($data), 'AES-256-GCM', $this->aesSettings['passphrase'], OPENSSL_RAW_DATA, $this->aesSettings['vector'], $this->aesSettings['tag'], '', 16);
+        if (empty($data)) {
+            return '';
+        }
+        return openssl_decrypt(base64_encode($data), 'AES-256-GCM', hex2bin($this->aesSettings['passphrase']), OPENSSL_RAW_DATA, hex2bin($this->aesSettings['vector']), hex2bin($this->aesSettings['tag']));
     }
 }
 ?>
