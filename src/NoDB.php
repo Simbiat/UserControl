@@ -32,10 +32,10 @@ class NoDB
             password_hash('rel@t!velyl0ngte$t5tr1ng', PASSWORD_ARGON2ID, ['threads' => $threads, 'time_cost' => $iterations, 'memory_cost' => $memory]);
             $end = microtime(true);
         } while (($end - $start) < $targettime);
-        $this->argonSettings = ['threads' => $threads, 'time_cost' => $iterations, 'memory_cost' => $memory];
+        $argonSettings = ['threads' => $threads, 'time_cost' => $iterations, 'memory_cost' => $memory];
         #Write config file
-        file_put_contents(__DIR__.'/argon.json', json_encode($this->argonSettings, JSON_PRETTY_PRINT));
-        return $this->argonSettings;
+        file_put_contents(__DIR__.'/argon.json', json_encode($argonSettings, JSON_PRETTY_PRINT));
+        return $argonSettings;
     }
     
     #Helper function to get count of available cores
@@ -50,6 +50,18 @@ class NoDB
             $cores = 1;
         }
         return $cores;
+    }
+    
+    #Function to generate passphrase and vector for encrypt and decrypt functions
+    public function genCrypto(): array
+    {
+        $passphrase = openssl_digest(openssl_random_pseudo_bytes(openssl_cipher_iv_length('AES-256-GCM')), 'sha3-512');
+        $vector = openssl_digest(openssl_random_pseudo_bytes(openssl_cipher_iv_length('AES-256-GCM')), 'sha3-512');
+        $tag = openssl_digest(openssl_random_pseudo_bytes(openssl_cipher_iv_length('AES-256-GCM')), 'sha3-512');
+        $cryptoSettings = ['passphrase' => $passphrase, 'vector' => $vector, 'tag' => $tag];
+        #Write config file
+        file_put_contents(__DIR__.'/aes.json', json_encode($cryptoSettings, JSON_PRETTY_PRINT));
+        return $cryptoSettings;
     }
 }
 ?>
