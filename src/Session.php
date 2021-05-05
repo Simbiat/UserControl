@@ -94,30 +94,91 @@ class Session implements \SessionHandlerInterface, \SessionIdInterface, \Session
     
     public function write(string $id, string $data): bool
     {
-        #Check if bot
-        $bot = $this->isBot();
-        #Write data
-        if (self::$dbcontroller->query(
-            'INSERT INTO `'.self::$dbprefix.'sessions` SET `sessionid`=:id, `bot`=:bot, `data`=:data, `viewing`=:viewing, `username`=:username ON DUPLICATE KEY UPDATE `time`=UTC_TIMESTAMP(), `bot`=:bot, `data`=:data, `viewing`=:viewing, `username`=:username;',
+        #Get UA
+        $ua = $this->getUA();
+        #Cache username (to prevent reading from Session)
+        $username = ($ua['bot'] !== NULL ? $ua['bot'] : ($_SESSION['username'] ?? NULL));
+        #Get IP
+        $ip = $this->getip();
+        #Prepare empty array
+        $queries = [];
+        #Update SEO related tables
+        if ($ua['bot'] === NULL && $ip !== NULL) {
+            #Update unique visitors
+            $queries[] = [
+                'INSERT INTO `'.self::$dbprefix.'seo_visitors` SET `ip`=:ip, `os`=:os, `client`=:client ON DUPLICATE KEY UPDATE `last`=UTC_TIMESTAMP();',
+                [
+                    #Data that makes this visitor unique
+                    ':ip' => [$ip, 'string'],
+                    ':os' => [
+                        (empty($ua['os']) ? NULL : $ua['os']),
+                        (empty($ua['os']) ? 'null' : 'string'),
+                    ],
+                    ':client' => [
+                        (empty($ua['client']) ? NULL : $ua['client']),
+                        (empty($ua['client']) ? 'null' : 'string'),
+                    ],
+                ],
+            ];
+            #Update page views
+            $queries[] = [
+                'INSERT IGNORE INTO `'.self::$dbprefix.'seo_pageviews` SET `page`=:page, `referer`=:referer, `ip`=:ip, `os`=:os, `client`=:client;',
+                [
+                    #What page is being viewed
+                    ':page' => rawurldecode((empty($_SERVER['REQUEST_URI']) ? 'index.php' : substr($_SERVER['REQUEST_URI'], 0, 256))),
+                    #Optional refere (if sent from other sources)
+                    ':referer' => [
+                        (empty($_SERVER['HTTP_REFERER']) ? NULL : substr($_SERVER['HTTP_REFERER'], 0, 256)),
+                        (empty($_SERVER['HTTP_REFERER']) ? 'null' : 'string'),
+                    ],
+                    #Data that identify this visit as unique
+                    ':ip' => [$ip, 'string'],
+                    ':os' => [
+                        (empty($ua['os']) ? NULL : $ua['os']),
+                        (empty($ua['os']) ? 'null' : 'string'),
+                    ],
+                    ':client' => [
+                        (empty($ua['client']) ? NULL : $ua['client']),
+                        (empty($ua['client']) ? 'null' : 'string'),
+                    ],
+                ],
+            ];
+        }
+        #Write session data
+        $queries[] = [
+            'INSERT INTO `'.self::$dbprefix.'sessions` SET `sessionid`=:id, `bot`=:bot, `ip`=:ip, `os`=:os, `client`=:client, `username`=:username, `page`=:page, `data`=:data ON DUPLICATE KEY UPDATE `time`=UTC_TIMESTAMP(), `bot`=:bot, `ip`=:ip, `os`=:os, `client`=:client, `username`=:username, `page`=:page, `data`=:data;',
             [
                 ':id' => $id,
+                #Whether this is a bot
+                ':bot' => ($ua['bot'] === NULL ? 0 : 1),
+                ':ip' => [
+                    (empty($ip) ? NULL : $ip),
+                    (empty($ip) ? 'null' : 'string'),
+                ],
+                #Useragent details only for logged in users for ability of review of active sessions
+                ':os' => [
+                        (empty($ua['os']) ? NULL : $ua['os']),
+                        (empty($ua['os']) ? 'null' : 'string'),
+                    ],
+                    ':client' => [
+                        (empty($ua['client']) ? NULL : $ua['client']),
+                        (empty($ua['client']) ? 'null' : 'string'),
+                    ],
+                #Either user name (if logged in) or bot name, if it's a bot
+                ':username' => [
+                    (empty($username) ? NULL : $username),
+                    (empty($username) ? 'null' : 'string'),
+                ],
+                #What page is being viewed
+                ':page' => rawurldecode((empty($_SERVER['REQUEST_URI']) ? 'index.php' : substr($_SERVER['REQUEST_URI'], 0, 256))),
+                #Actual session data
                 ':data' => [
                     (empty($data) ? '' : $this->security->encrypt($data)),
                     'string',
                 ],
-                #What page is being viewed
-                ':viewing' => rawurldecode((empty($_SERVER['REQUEST_URI']) ? 'index.php' : $_SERVER['REQUEST_URI'])),
-                ':bot' => ($bot === false ? 0 : 1),
-                ':username' => [
-                    (empty($_SESSION['username']) ? ($bot === false ? NULL : $bot) : $_SESSION['username']),
-                    (empty($_SESSION['username']) ? ($bot === false ? 'null' : 'string') : 'string'),
-                ],
-            ]
-        )) {
-            return true;
-        } else {
-            return false;
-        }
+            ],
+        ];
+        return self::$dbcontroller->query($queries);
     }
     
     public function destroy(string $id): bool
@@ -125,9 +186,9 @@ class Session implements \SessionHandlerInterface, \SessionIdInterface, \Session
         return self::$dbcontroller->query('DELETE FROM `'.self::$dbprefix.'sessions` WHERE `sessionid`=:id', [':id'=>$id]);
     }
     
-    public function gc(int $maxlifetime): bool
+    public function gc(int $max_lifetime): bool
     {
-        if (self::$dbcontroller->query('DELETE FROM `'.self::$dbprefix.'sessions` WHERE `time` <= DATE_SUB(UTC_TIMESTAMP(), INTERVAL :life SECOND);', [':life' => [$this->sessionLife, 'int']])) {
+        if (self::$dbcontroller->query('DELETE FROM `'.self::$dbprefix.'sessions` WHERE `time` <= DATE_SUB(UTC_TIMESTAMP(), INTERVAL :life SECOND);', [':life' => [$max_lifetime, 'int']])) {
             return true;
         } else {
             return false;
@@ -153,26 +214,6 @@ class Session implements \SessionHandlerInterface, \SessionIdInterface, \Session
     public function updateTimestamp(string $id, string $data): string
     {
         return self::$dbcontroller->query('UPDATE `'.self::$dbprefix.'sessions` SET `time`= UTC_TIMESTAMP() WHERE `sessionid` = :id;', [':id'=>$id]);
-    }
-    
-    #Check if bot
-    private function isBot(): bool|string
-    {
-        #Check if User Agent is present
-        if (empty($_SERVER['HTTP_USER_AGENT'])) {
-            return false;
-        }
-        #Initialize device detector
-        $dd = (new \DeviceDetector\Parser\Bot());
-        $dd->setUserAgent($_SERVER['HTTP_USER_AGENT']);
-        $bot = $dd->parse();
-        if ($bot === NULL) {
-            #Not a bot
-            return false;
-        } else {
-            #Bot
-            return $bot['name'];
-        }
     }
 }
 ?>

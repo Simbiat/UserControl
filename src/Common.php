@@ -57,5 +57,42 @@ trait Common
         }
         return NULL;
     }
+    
+    #Get Bot name, OS and Browser for user agent
+    private function getUA(): ?array
+    {
+        #Check if User Agent is present
+        if (empty($_SERVER['HTTP_USER_AGENT'])) {
+            return NULL;
+        }
+        #Force full versions
+        \DeviceDetector\Parser\Device\AbstractDeviceParser::setVersionTruncation(\DeviceDetector\Parser\Device\AbstractDeviceParser::VERSION_TRUNCATION_NONE);
+        #Initialize device detector
+        $dd = (new \DeviceDetector\DeviceDetector($_SERVER['HTTP_USER_AGENT']));
+        $dd->parse();
+        #Get bot name
+        $bot = $dd->getBot();
+        if ($bot !== NULL) {
+            #Do not waste resources on bots
+            return ['bot' => substr($bot['name'], 0, 64), 'os' => NULL, 'client' => NULL];
+        }
+        #Get OS
+        $os = $dd->getOs();
+        #Concat OS and version
+        $os = trim(($os['name'] ?? '').' '.($os['version'] ?? ''));
+        #Force OS to be NULL, if it's empty
+        if (empty($os)) {
+            $os = NULL;
+        }
+        #Get client
+        $client = $dd->getClient();
+        #Concat client and version
+        $client = trim(($client['name'] ?? '').' '.($client['version'] ?? ''));
+        #Force client to be NULL, if it's empty
+        if (empty($client)) {
+            $client = NULL;
+        }
+        return ['bot' => NULL, 'os' => substr($os, 0, 100), 'client' => substr($client, 0, 100)];
+    }
 }
 ?>
