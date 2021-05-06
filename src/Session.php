@@ -88,7 +88,7 @@ class Session implements \SessionHandlerInterface, \SessionIdInterface, \Session
         if (empty($session)) {
             return '';
         } else {
-            return $this->security->decrypt($session['data']);
+            return $this->security->decrypt($session);
         }
     }
     
@@ -211,7 +211,7 @@ class Session implements \SessionHandlerInterface, \SessionIdInterface, \Session
         return self::$dbcontroller->check('SELECT `sessionid` FROM `'.self::$dbprefix.'sessions` WHERE `sessionid` = :id;', [':id'=>$id]);
     }
     
-    public function updateTimestamp(string $id, string $data): string
+    public function updateTimestamp(string $id, string $data): bool
     {
         return self::$dbcontroller->query('UPDATE `'.self::$dbprefix.'sessions` SET `time`= UTC_TIMESTAMP() WHERE `sessionid` = :id;', [':id'=>$id]);
     }

@@ -41,7 +41,7 @@ class Security
         if (is_file(__DIR__.'/aes.json')) {
             #Read the file
             $aes = json_decode(file_get_contents(__DIR__.'/aes.json'), true);
-            if (isset($aes['passphrase']) && isset($aes['vector'])) {
+            if (isset($aes['passphrase'])) {
                 $this->aesSettings = $aes;
             } else {
                 #Generate the settings
@@ -103,7 +103,14 @@ class Security
         if (empty($data)) {
             return '';
         }
-        return base64_encode(openssl_encrypt($data, 'AES-256-GCM', hex2bin($this->aesSettings['passphrase']), OPENSSL_RAW_DATA, hex2bin($this->aesSettings['vector']), hex2bin($this->aesSettings['tag']), '', 16));
+        #Generate IV
+        $iv = openssl_random_pseudo_bytes(openssl_cipher_iv_length('AES-256-GCM'));
+        #This is where tag will be written by OpenSSL
+        $tag = '';
+        #Ecnrypt and als get the tag
+        $encrypted = openssl_encrypt($data, 'AES-256-GCM', hex2bin($this->aesSettings['passphrase']), OPENSSL_RAW_DATA, $iv, $tag, '', 16);
+        #Ecnrypt and prepend IV and tag
+        return base64_encode($iv.$tag.$encrypted);
     }
     
     #Function to decrypt stuff
@@ -112,7 +119,15 @@ class Security
         if (empty($data)) {
             return '';
         }
-        return openssl_decrypt(base64_encode($data), 'AES-256-GCM', hex2bin($this->aesSettings['passphrase']), OPENSSL_RAW_DATA, hex2bin($this->aesSettings['vector']), hex2bin($this->aesSettings['tag']));
+        #Decode
+        $data = base64_decode($data);
+        #Get IV
+        $iv = substr($data, 0, 12);
+        #Get tag
+        $tag = substr($data, 12, 16);
+        #Strip them from data
+        $data = substr($data, 28);
+        return openssl_decrypt($data, 'AES-256-GCM', hex2bin($this->aesSettings['passphrase']), OPENSSL_RAW_DATA, $iv, $tag);
     }
 }
 ?>

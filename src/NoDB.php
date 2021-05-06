@@ -52,13 +52,12 @@ class NoDB
         return $cores;
     }
     
-    #Function to generate passphrase and vector for encrypt and decrypt functions
+    #Function to generate passphrase for encrypt and decrypt functions
     public function genCrypto(): array
     {
         $passphrase = bin2hex(openssl_random_pseudo_bytes(openssl_cipher_iv_length('AES-256-GCM')));
-        $vector = bin2hex(openssl_random_pseudo_bytes(openssl_cipher_iv_length('AES-256-GCM')));
-        $tag = bin2hex(openssl_random_pseudo_bytes(openssl_cipher_iv_length('AES-256-GCM')));
-        $cryptoSettings = ['passphrase' => $passphrase, 'vector' => $vector, 'tag' => $tag];
+        #Using array, in case some other settings will be required in the future
+        $cryptoSettings = ['passphrase' => $passphrase];
         #Write config file
         file_put_contents(__DIR__.'/aes.json', json_encode($cryptoSettings, JSON_PRETTY_PRINT));
         return $cryptoSettings;
