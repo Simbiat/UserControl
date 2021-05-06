@@ -15,6 +15,8 @@ class Session implements \SessionHandlerInterface, \SessionIdInterface, \Session
     
     public function __construct(int $sessionLife = 300)
     {
+        #Set serialization method
+        ini_set('session.serialize_handler', 'php_serialize');
         #Dissallow permanent storage of session ID cookies
         ini_set('session.cookie_lifetime', '0');
         #ENforce use of cookies for session ID storage
@@ -84,26 +86,38 @@ class Session implements \SessionHandlerInterface, \SessionIdInterface, \Session
     public function read(string $id): string
     {
         #Get session data
-        $session = self::$dbcontroller->selectValue('SELECT `data` FROM `'.self::$dbprefix.'sessions` WHERE `sessionid` = :id', [':id'=>$id]);
-        if (empty($session)) {
+        $data = self::$dbcontroller->selectValue('SELECT `data` FROM `'.self::$dbprefix.'sessions` WHERE `sessionid` = :id', [':id'=>$id]);
+        if (empty($data)) {
             return '';
         } else {
-            return $this->security->decrypt($session);
+            #Decrypt data
+            $data = $this->security->decrypt($data);
+            #Deserialize to check if UserAgent data is present
+            $data = unserialize($data);
+            if (empty($data['UA'])) {
+                #Add UserAgent data
+                $data['UA'] = $this->getUA();
+            }
+            return serialize($data);
         }
     }
     
     public function write(string $id, string $data): bool
     {
-        #Get UA
-        $ua = $this->getUA();
+        #Deserialize to check if UserAgent data is present
+        $data = unserialize($data);
+        if (empty($data['UA'])) {
+            #Add UserAgent data
+            $data['UA'] = $this->getUA();
+        }
         #Cache username (to prevent reading from Session)
-        $username = ($ua['bot'] !== NULL ? $ua['bot'] : ($_SESSION['username'] ?? NULL));
+        $username = ($data['UA']['bot'] !== NULL ? $data['UA']['bot'] : ($_SESSION['username'] ?? NULL));
         #Get IP
         $ip = $this->getip();
         #Prepare empty array
         $queries = [];
         #Update SEO related tables
-        if (self::$SEOtracking === true && $ua['bot'] === NULL && $ip !== NULL) {
+        if (self::$SEOtracking === true && $data['UA']['bot'] === NULL && $ip !== NULL) {
             #Update unique visitors
             $queries[] = [
                 'INSERT INTO `'.self::$dbprefix.'seo_visitors` SET `ip`=:ip, `os`=:os, `client`=:client ON DUPLICATE KEY UPDATE `last`=UTC_TIMESTAMP();',
@@ -111,12 +125,12 @@ class Session implements \SessionHandlerInterface, \SessionIdInterface, \Session
                     #Data that makes this visitor unique
                     ':ip' => [$ip, 'string'],
                     ':os' => [
-                        (empty($ua['os']) ? NULL : $ua['os']),
-                        (empty($ua['os']) ? 'null' : 'string'),
+                        (empty($data['UA']['os']) ? NULL : $data['UA']['os']),
+                        (empty($data['UA']['os']) ? 'null' : 'string'),
                     ],
                     ':client' => [
-                        (empty($ua['client']) ? NULL : $ua['client']),
-                        (empty($ua['client']) ? 'null' : 'string'),
+                        (empty($data['UA']['client']) ? NULL : $data['UA']['client']),
+                        (empty($data['UA']['client']) ? 'null' : 'string'),
                     ],
                 ],
             ];
@@ -134,12 +148,12 @@ class Session implements \SessionHandlerInterface, \SessionIdInterface, \Session
                     #Data that identify this visit as unique
                     ':ip' => [$ip, 'string'],
                     ':os' => [
-                        (empty($ua['os']) ? NULL : $ua['os']),
-                        (empty($ua['os']) ? 'null' : 'string'),
+                        (empty($data['UA']['os']) ? NULL : $data['UA']['os']),
+                        (empty($data['UA']['os']) ? 'null' : 'string'),
                     ],
                     ':client' => [
-                        (empty($ua['client']) ? NULL : $ua['client']),
-                        (empty($ua['client']) ? 'null' : 'string'),
+                        (empty($data['UA']['client']) ? NULL : $data['UA']['client']),
+                        (empty($data['UA']['client']) ? 'null' : 'string'),
                     ],
                 ],
             ];
@@ -150,19 +164,19 @@ class Session implements \SessionHandlerInterface, \SessionIdInterface, \Session
             [
                 ':id' => $id,
                 #Whether this is a bot
-                ':bot' => ($ua['bot'] === NULL ? 0 : 1),
+                ':bot' => ($data['UA']['bot'] === NULL ? 0 : 1),
                 ':ip' => [
                     (empty($ip) ? NULL : $ip),
                     (empty($ip) ? 'null' : 'string'),
                 ],
                 #Useragent details only for logged in users for ability of review of active sessions
                 ':os' => [
-                        (empty($ua['os']) ? NULL : $ua['os']),
-                        (empty($ua['os']) ? 'null' : 'string'),
+                        (empty($data['UA']['os']) ? NULL : $data['UA']['os']),
+                        (empty($data['UA']['os']) ? 'null' : 'string'),
                     ],
                     ':client' => [
-                        (empty($ua['client']) ? NULL : $ua['client']),
-                        (empty($ua['client']) ? 'null' : 'string'),
+                        (empty($data['UA']['client']) ? NULL : $data['UA']['client']),
+                        (empty($data['UA']['client']) ? 'null' : 'string'),
                     ],
                 #Either user name (if logged in) or bot name, if it's a bot
                 ':username' => [
@@ -173,7 +187,7 @@ class Session implements \SessionHandlerInterface, \SessionIdInterface, \Session
                 ':page' => rawurldecode((empty($_SERVER['REQUEST_URI']) ? 'index.php' : substr($_SERVER['REQUEST_URI'], 0, 256))),
                 #Actual session data
                 ':data' => [
-                    (empty($data) ? '' : $this->security->encrypt($data)),
+                    (empty($data) ? '' : $this->security->encrypt(serialize($data))),
                     'string',
                 ],
             ],
