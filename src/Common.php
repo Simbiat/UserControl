@@ -6,6 +6,8 @@ trait Common
 {    
     #Database prefix
     public static string $dbprefix = 'uc__';
+    #Flag for SEO statistics
+    public static bool $SEOtracking = true;
     #Cached DB controller
     public static ?\Simbiat\Database\Controller $dbcontroller = NULL;
     

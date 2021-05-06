@@ -103,7 +103,7 @@ class Session implements \SessionHandlerInterface, \SessionIdInterface, \Session
         #Prepare empty array
         $queries = [];
         #Update SEO related tables
-        if ($ua['bot'] === NULL && $ip !== NULL) {
+        if (self::$SEOtracking === true && $ua['bot'] === NULL && $ip !== NULL) {
             #Update unique visitors
             $queries[] = [
                 'INSERT INTO `'.self::$dbprefix.'seo_visitors` SET `ip`=:ip, `os`=:os, `client`=:client ON DUPLICATE KEY UPDATE `last`=UTC_TIMESTAMP();',
