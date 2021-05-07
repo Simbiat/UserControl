@@ -35,10 +35,10 @@ class Session implements \SessionHandlerInterface, \SessionIdInterface, \Session
             $sessionLife = 300;
         }
         ini_set('session.gc_maxlifetime', strval($sessionLife));
+        $this->sessionLife = $sessionLife;
         #Ensure that garbage collector is always triggered
         ini_set('session.gc_probability', '1');
         ini_set('session.gc_divisor', '1');
-        $this->sessionLife = $sessionLife;
         #Disable transparent session ID management (life through URI values)
         ini_set('session.use_trans_sid', 'Off');
         #Set length of session IDs
@@ -51,8 +51,8 @@ class Session implements \SessionHandlerInterface, \SessionIdInterface, \Session
         #Allow upload progress tracking
         ini_set('session.upload_progress.enabled', 'On');
         ini_set('session.upload_progress.cleanup', 'On');
-        #Ensure session data is written only in case of changes (not likely to be affect anything in our case)
-        ini_set('session.lazy_write', 'On');
+        #Since we are modifying data available even for new sessions (on 1st read), leaving lazy_write On (default) will rpevent from session data to be written, unless something else is added, which may not happen. Thus turning it off. This can reduce performance a little bit, but this will also help with mitigations of session fixation/hijacking.
+        ini_set('session.lazy_write', 'Off');
         #Cache DB controller, if not done already
         if (self::$dbcontroller === NULL) {
             try {
@@ -73,10 +73,6 @@ class Session implements \SessionHandlerInterface, \SessionIdInterface, \Session
         if (self::$dbcontroller === NULL) {
             return false;
         } else {
-            if (empty($_SESSION['UA'])) {
-                #Add UserAgent data
-                $_SESSION['UA'] = $this->getUA();
-            }
             return true;
         }
     }
@@ -90,15 +86,18 @@ class Session implements \SessionHandlerInterface, \SessionIdInterface, \Session
     public function read(string $id): string
     {
         #Get session data
-        $data = self::$dbcontroller->selectValue('SELECT `data` FROM `'.self::$dbprefix.'sessions` WHERE `sessionid` = :id', [':id'=>$id]);
+        $data = self::$dbcontroller->selectValue('SELECT `data` FROM `'.self::$dbprefix.'sessions` WHERE `sessionid` = :id AND `time` > DATE_SUB(UTC_TIMESTAMP(), INTERVAL :life SECOND)', [':id' => $id, ':life' => [$this->sessionLife, 'int']]);
         if (!empty($data)) {
             #Decrypt data
             $data = $this->security->decrypt($data);
             #Deserialize to check if UserAgent data is present
             $data = unserialize($data);
+        } else {
+            $data = [];
         }
         if (empty($data['UA'])) {
             #Add UserAgent data
+            #This is done to make the data readily available as soon as session is created and somewhat improve performance
             $data['UA'] = $this->getUA();
         }
         return serialize($data);
@@ -204,7 +203,7 @@ class Session implements \SessionHandlerInterface, \SessionIdInterface, \Session
     
     public function gc(int $max_lifetime): bool
     {
-        if (self::$dbcontroller->query('DELETE FROM `'.self::$dbprefix.'sessions` WHERE `time` <= DATE_SUB(UTC_TIMESTAMP(), INTERVAL :life SECOND);', [':life' => [$max_lifetime, 'int']])) {
+        if (self::$dbcontroller->query('DELETE FROM `'.self::$dbprefix.'sessions` WHERE `time` <= DATE_SUB(UTC_TIMESTAMP(), INTERVAL :life SECOND);', [':life' => [$this->sessionLife, 'int']])) {
             return true;
         } else {
             return false;
