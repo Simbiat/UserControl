@@ -73,6 +73,10 @@ class Session implements \SessionHandlerInterface, \SessionIdInterface, \Session
         if (self::$dbcontroller === NULL) {
             return false;
         } else {
+            if (empty($_SESSION['UA'])) {
+                #Add UserAgent data
+                $_SESSION['UA'] = $this->getUA();
+            }
             return true;
         }
     }
@@ -87,19 +91,17 @@ class Session implements \SessionHandlerInterface, \SessionIdInterface, \Session
     {
         #Get session data
         $data = self::$dbcontroller->selectValue('SELECT `data` FROM `'.self::$dbprefix.'sessions` WHERE `sessionid` = :id', [':id'=>$id]);
-        if (empty($data)) {
-            return '';
-        } else {
+        if (!empty($data)) {
             #Decrypt data
             $data = $this->security->decrypt($data);
             #Deserialize to check if UserAgent data is present
             $data = unserialize($data);
-            if (empty($data['UA'])) {
-                #Add UserAgent data
-                $data['UA'] = $this->getUA();
-            }
-            return serialize($data);
         }
+        if (empty($data['UA'])) {
+            #Add UserAgent data
+            $data['UA'] = $this->getUA();
+        }
+        return serialize($data);
     }
     
     public function write(string $id, string $data): bool
