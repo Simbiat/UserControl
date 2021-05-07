@@ -94,7 +94,7 @@ trait Common
         if (empty($client)) {
             $client = NULL;
         }
-        return ['bot' => NULL, 'os' => substr($os, 0, 100), 'client' => substr($client, 0, 100)];
+        return ['bot' => NULL, 'os' => ($os !== NULL ? substr($os, 0, 100) : NULL), 'client' => ($client !== NULL ? substr($client, 0, 100) : NULL)];
     }
 }
 ?>
