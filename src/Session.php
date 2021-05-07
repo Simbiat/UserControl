@@ -120,40 +120,40 @@ class Session implements \SessionHandlerInterface, \SessionIdInterface, \Session
         if (self::$SEOtracking === true && $data['UA']['bot'] === NULL && $ip !== NULL) {
             #Update unique visitors
             $queries[] = [
-                'INSERT INTO `'.self::$dbprefix.'seo_visitors` SET `ip`=:ip, `os`=:os, `client`=:client ON DUPLICATE KEY UPDATE `last`=UTC_TIMESTAMP();',
+                'INSERT INTO `'.self::$dbprefix.'seo_visitors` SET `ip`=:ip, `os`=:os, `client`=:client ON DUPLICATE KEY UPDATE `views`=`views`+1;',
                 [
                     #Data that makes this visitor unique
                     ':ip' => [$ip, 'string'],
                     ':os' => [
-                        (empty($data['UA']['os']) ? NULL : $data['UA']['os']),
-                        (empty($data['UA']['os']) ? 'null' : 'string'),
+                        (empty($data['UA']['os']) ? '' : $data['UA']['os']),
+                        'string',
                     ],
                     ':client' => [
-                        (empty($data['UA']['client']) ? NULL : $data['UA']['client']),
-                        (empty($data['UA']['client']) ? 'null' : 'string'),
+                        (empty($data['UA']['client']) ? '' : $data['UA']['client']),
+                        'string',
                     ],
                 ],
             ];
             #Update page views
             $queries[] = [
-                'INSERT IGNORE INTO `'.self::$dbprefix.'seo_pageviews` SET `page`=:page, `referer`=:referer, `ip`=:ip, `os`=:os, `client`=:client;',
+                'INSERT INTO `'.self::$dbprefix.'seo_pageviews` SET `page`=:page, `referer`=:referer, `ip`=:ip, `os`=:os, `client`=:client ON DUPLICATE KEY UPDATE `views`=`views`+1;',
                 [
                     #What page is being viewed
                     ':page' => rawurldecode((empty($_SERVER['REQUEST_URI']) ? 'index.php' : substr($_SERVER['REQUEST_URI'], 0, 256))),
                     #Optional refere (if sent from other sources)
                     ':referer' => [
-                        (empty($_SERVER['HTTP_REFERER']) ? NULL : substr($_SERVER['HTTP_REFERER'], 0, 256)),
-                        (empty($_SERVER['HTTP_REFERER']) ? 'null' : 'string'),
+                        (empty($_SERVER['HTTP_REFERER']) ? '' : substr($_SERVER['HTTP_REFERER'], 0, 256)),
+                        'string',
                     ],
                     #Data that identify this visit as unique
                     ':ip' => [$ip, 'string'],
                     ':os' => [
-                        (empty($data['UA']['os']) ? NULL : $data['UA']['os']),
-                        (empty($data['UA']['os']) ? 'null' : 'string'),
+                        (empty($data['UA']['os']) ? '' : $data['UA']['os']),
+                        'string',
                     ],
                     ':client' => [
-                        (empty($data['UA']['client']) ? NULL : $data['UA']['client']),
-                        (empty($data['UA']['client']) ? 'null' : 'string'),
+                        (empty($data['UA']['client']) ? '' : $data['UA']['client']),
+                        'string',
                     ],
                 ],
             ];
