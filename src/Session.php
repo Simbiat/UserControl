@@ -15,6 +15,10 @@ class Session implements \SessionHandlerInterface, \SessionIdInterface, \Session
     
     public function __construct(int $sessionLife = 300)
     {
+        #Set session name for easier inditification. '__Host-' prefix signals to the browser that both the Path=/ and Secure attributes are required, so that subdomains cannot modify the sessino cookie.
+        session_name('__Host-sess_'.preg_replace('/[^a-zA-Z0-9\-_]/', '', $_SERVER['HTTP_HOST']));
+        #Additionally limit cookie to default, that is current domain only. If we manually set it to something, browsers will ignore the cookie due to __Host-' prefix.
+        #ini_set('session.cookie_domain', '');
         #Set serialization method
         ini_set('session.serialize_handler', 'php_serialize');
         #Dissallow permanent storage of session ID cookies
@@ -100,6 +104,10 @@ class Session implements \SessionHandlerInterface, \SessionIdInterface, \Session
             #This is done to make the data readily available as soon as session is created and somewhat improve performance
             $data['UA'] = $this->getUA();
         }
+        #Add CSRF token, if missing
+        if (empty($data['CSRF'])) {
+            $data['CSRF'] = $this->security->genCSRF();
+        }
         return serialize($data);
     }
     
@@ -111,6 +119,8 @@ class Session implements \SessionHandlerInterface, \SessionIdInterface, \Session
             #Add UserAgent data
             $data['UA'] = $this->getUA();
         }
+        #Force regeneration of CSRF token
+        $data['CSRF'] = $this->security->genCSRF();
         #Cache username (to prevent reading from Session)
         $username = ($data['UA']['bot'] !== NULL ? $data['UA']['bot'] : ($_SESSION['username'] ?? NULL));
         #Get IP

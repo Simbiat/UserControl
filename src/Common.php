@@ -11,21 +11,48 @@ trait Common
     #Cached DB controller
     public static ?\Simbiat\Database\Controller $dbcontroller = NULL;
     
-    #Function to log audit actions
-    private function audit(int|string $id, string $action): void
+    #Function to log actions
+    private function log(string $type, string $action, mixed $extras = NULL): bool
     {
-        self::$dbcontroller->query(
-            'INSERT INTO `'.self::$dbprefix.'audit` (`userid`, `ip`, `useragent`, `action`) VALUES (:id, :ip, :ua, :action)',
-            [
-                ':id' => $id,
-                ':ip' => $this->getip(),
-                ':ua' => [
-                    (empty($_SERVER['HTTP_USER_AGENT']) ? NULL : $_SERVER['HTTP_USER_AGENT']),
-                    (empty($_SERVER['HTTP_USER_AGENT']) ? 'null' : 'string'),
-                ],
-                ':action' => $action,
-            ]
-        );
+        if (!empty($extras)) {
+            $extras = json_encode($extras, JSON_PRETTY_PRINT|JSON_INVALID_UTF8_SUBSTITUTE|JSON_UNESCAPED_UNICODE|JSON_PRESERVE_ZERO_FRACTION);
+        }
+        #Get IP
+        $ip = $this->getip();
+        #Get username
+        $userid = @$_SESSION['userid'];
+        try {
+            #Cache DB controller, if not done already
+            if (self::$dbcontroller === NULL) {
+                self::$dbcontroller = new \Simbiat\Database\Controller;
+            }
+            self::$dbcontroller->query(
+                'INSERT INTO `'.self::$dbprefix.'logs` (`time`, `type`, `action`, `userid`, `ip`, `useragent`, `extra`) VALUES (current_timestamp(), (SELECT `typeid` FROM `'.self::$dbprefix.'log_types` WHERE `name`=:type), :action, :userid, :ip, :ua, :extras);',
+                [
+                    ':type' => $type,
+                    ':action' => $action,
+                    ':userid' => [
+                        (empty($userid) ? NULL : $userid),
+                        (empty($userid) ? 'null' : 'string'),
+                    ],
+                    ':ip' => [
+                        (empty($ip) ? NULL : $ip),
+                        (empty($ip) ? 'null' : 'string'),
+                    ],
+                    ':ua' => [
+                        (empty($_SERVER['HTTP_USER_AGENT']) ? NULL : $_SERVER['HTTP_USER_AGENT']),
+                        (empty($_SERVER['HTTP_USER_AGENT']) ? 'null' : 'string'),
+                    ],
+                    ':extras' => [
+                        (empty($extras) ? NULL : $extras),
+                        (empty($extras) ? 'null' : 'string'),
+                    ],
+                ]
+            );
+            return true;
+        } catch (\Exception $e) {
+            return false;
+        }
     }
     
     #Function to return IP

@@ -129,5 +129,69 @@ class Security
         $data = substr($data, 28);
         return openssl_decrypt($data, 'AES-256-GCM', hex2bin($this->aesSettings['passphrase']), OPENSSL_RAW_DATA, $iv, $tag);
     }
+    
+    #Function to help protect against CSRF. Suggested to use for forms or APIs. Needs to be used before any writes to $_SESSION
+    public function antiCSRF(array $allowOrigins = [], bool $originRequried = false, bool $exit = true): bool
+    {
+        #Get CSRF token
+        $token = $_POST['CSRF'] ?? $_SERVER['HTTP_X_CSRF_TOKEN'] ?? $_SERVER['HTTP_X_XSRF_TOKEN'];
+        #Get origin
+        #In some cases Origin can be empty. In case of forms we can try cehcking Referer instead.
+        #In case of proxy is being used we should try taking the data from X-Forwarded-Host.
+        $origin = $_SERVER['HTTP_X_FORWARDED_HOST'] ?? $_SERVER['HTTP_ORIGIN'] ?? $_SERVER['HTTP_REFERER'] ?? NULL;
+        #Check if token is provided
+        if (!empty($token)) {
+            #Check if CSRF token is present in session data
+            if (!empty($_SESSION['CSRF'])) {
+                #Check if they match
+                if (hash_equals($_SESSION['CSRF'], $token) === true) {
+                    #Check if HTTP Origin is among allowed ones, if we want restrict them.
+                    #Note that this will be applied to forms or APIs you want to restrict. For global restiction use \Simbiat\http20\headers->security()
+                    if (empty($allowOrigins) ||
+                        #If origins are limited
+                        (
+                            #Check if origin is not present and is enforced
+                            (empty($origin) && $originRequried === false) ||
+                            #Check if origin is present
+                            (!empty($origin) &&
+                                #Check if it's a valid origin and is allowed
+                                (preg_match('/'.self::originRegex.'/i', $origin) === 1 || in_array($origin, $allowOrigins))
+                            )
+                        )
+                    ) {
+                        #All checks passed
+                        return true;
+                    } else {
+                        $reason = 'Bad origin';
+                    }
+                } else {
+                    $reason = 'Different hashes';
+                }
+            } else {
+                $reason = 'No token in session';
+            }
+        } else {
+            $reason = 'No token from client';
+        }
+        #Log attack details. Suppressing errors, so that values will be turned into NULLs if they are not set
+        $this->log('CSRF', 'CSRF attack detected', [
+            'reason' => $reason,
+            'page' => @$_SERVER['REQUEST_URI'],
+            'forwarded' => @$_SERVER['HTTP_X_FORWARDED_HOST'],
+            'origin' => @$_SERVER['HTTP_ORIGIN'],
+            'referer' => @$_SERVER['HTTP_REFERER'],
+        ]);
+        #Send 403 error code in header, with option to force close connection
+        (new \Simbiat\http20\Headers)->clientReturn('403', $exit);
+        return false;
+    }
+    
+    #Function to generate CSRF token
+    public function genCSRF(): string
+    {
+        $token = bin2hex(random_bytes(32));
+        header('X-CSRF-Token: '.$token, true);
+        return $token;
+    }
 }
 ?>
