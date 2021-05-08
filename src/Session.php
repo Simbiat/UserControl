@@ -233,7 +233,15 @@ class Session implements \SessionHandlerInterface, \SessionIdInterface, \Session
     #########################################
     public function validateId(string $id): bool
     {
-        return self::$dbcontroller->check('SELECT `sessionid` FROM `'.self::$dbprefix.'sessions` WHERE `sessionid` = :id;', [':id'=>$id]);
+        #Get ID
+        $sessionid = self::$dbcontroller->selectValue('SELECT `sessionid` FROM `'.self::$dbprefix.'sessions` WHERE `sessionid` = :id;', [':id'=>$id]);
+        #Check if it was returned
+        if (empty($sessionid)) {
+            #No such session exists
+            return false;
+        }
+        #Validate session id using hash_equals to mitigate timing attacks
+        return hash_equals($sessionid, $id);
     }
     
     public function updateTimestamp(string $id, string $data): bool

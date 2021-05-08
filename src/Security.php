@@ -143,7 +143,7 @@ class Security
         if (!empty($token)) {
             #Check if CSRF token is present in session data
             if (!empty($_SESSION['CSRF'])) {
-                #Check if they match
+                #Check if they match. hash_equals helps mitigate timing attacks
                 if (hash_equals($_SESSION['CSRF'], $token) === true) {
                     #Check if HTTP Origin is among allowed ones, if we want restrict them.
                     #Note that this will be applied to forms or APIs you want to restrict. For global restiction use \Simbiat\http20\headers->security()
