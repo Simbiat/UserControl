@@ -10,6 +10,8 @@ trait Common
     public static bool $SEOtracking = true;
     #Cached DB controller
     public static ?\Simbiat\Database\Controller $dbcontroller = NULL;
+    #Whether SMS OTP is supported
+    public static bool $sms = false;
     
     #Function to log actions
     private function log(string $type, string $action, mixed $extras = NULL): bool

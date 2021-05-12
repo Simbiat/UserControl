@@ -122,13 +122,13 @@ class Session implements \SessionHandlerInterface, \SessionIdInterface, \Session
         #Force regeneration of CSRF token
         $data['CSRF'] = $this->security->genCSRF();
         #Cache username (to prevent reading from Session)
-        $username = ($data['UA']['bot'] !== NULL ? $data['UA']['bot'] : ($_SESSION['username'] ?? NULL));
+        $username = (!empty($data['UA']['bot']) ? $data['UA']['bot'] : ($data['username'] ?? NULL));
         #Get IP
         $ip = $this->getip();
         #Prepare empty array
         $queries = [];
         #Update SEO related tables
-        if (self::$SEOtracking === true && $data['UA']['bot'] === NULL && $ip !== NULL) {
+        if (self::$SEOtracking === true && empty($data['UA']['bot']) && $ip !== NULL) {
             #Update unique visitors
             $queries[] = [
                 'INSERT INTO `'.self::$dbprefix.'seo_visitors` SET `ip`=:ip, `os`=:os, `client`=:client ON DUPLICATE KEY UPDATE `views`=`views`+1;',
@@ -175,7 +175,7 @@ class Session implements \SessionHandlerInterface, \SessionIdInterface, \Session
             [
                 ':id' => $id,
                 #Whether this is a bot
-                ':bot' => ($data['UA']['bot'] === NULL ? 0 : 1),
+                ':bot' => [(empty($data['UA']['bot']) ? 0 : 1), 'int'],
                 ':ip' => [
                     (empty($ip) ? NULL : $ip),
                     (empty($ip) ? 'null' : 'string'),
