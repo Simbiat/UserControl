@@ -1,3 +1,2 @@
-
-src/argon.json
-src/aes.json
+src/json/argon.json
+src/json/aes.json

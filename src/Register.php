@@ -15,26 +15,45 @@ class Register
         }
     }
     
-    #Function to generate registration form.
+    #Function to generate registration/sign_in form.
     public function form(): string
     {
         #Open form
-        $form = '<form id="registration" name="registration" autocomplete="on">';
-        #Username
-        $form .= '<div class="float_label_div"><input form="registration" type="text" name="username" id="regform_username" placeholder="Username" autocomplete="username" inputmode="text" maxlength="64"><label for="regform_username">Username</label></div>';
+        $form = '<form role="form" id="signinup" name="signinup" autocomplete="on">';
+        #Toggle for user login/registration/password reset
+        $form .= '<div id="radio_signinup">
+            <span>I am</span>
+            <span class="radio_and_label">
+                <input type="radio" id="radio_existuser" name="signinuptype" value="member" checked>
+                <label for="radio_existuser">member</label>
+            </span>
+            <span class="radio_and_label">
+                <input type="radio" id="radio_newuser" name="signinuptype" value="newuser">
+                <label for="radio_newuser">new</label>
+            </span>
+            <span class="radio_and_label">
+                <input type="radio" id="radio_forget" name="signinuptype" value="forget">
+                <label for="radio_forget">forgetful</label>
+            </span>
+        </div>';
         #Email
-        $form .= '<div class="float_label_div"><input form="registration" type="email" required aria-required="true" name="email" id="regform_email" placeholder="your@email.com" autocomplete="email" inputmode="email" maxlength="320" pattern="^[a-zA-Z0-9.!#$%&\'*+\/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$"><label for="regform_email">your@email.com</label></div>';
-        #Optional telephone, if SMS are enabled
-        if (self::$sms) {
-            #Email
-            $form .= '<div class="float_label_div"><input form="registration" type="tel" name="tel" id="regform_tel" placeholder="123456789012345" autocomplete="tel" inputmode="tel" maxlength="15" pattern="^[0-9]{6,15}$"><label for="regform_tel">Telephone</label></div>';
-        }
+        $form .= '<div class="float_label_div">
+            <input form="signinup" type="email" required aria-required="true" name="email" id="signinup_email" placeholder="your@email.com" autocomplete="email" inputmode="email" maxlength="320" pattern="^[a-zA-Z0-9.!#$%&\'*+\/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$">
+            <label for="signinup_email">your@email.com</label>
+        </div>';
         #Password
-        $form .= '<div class="float_label_div"><input form="registration" type="password" required aria-required="true" name="password" id="regform_password" placeholder="Password" autocomplete="new-password" inputmode="text" minlength="8"><label for="regform_password">Password</label></div>';
+        $form .= '<div class="float_label_div">
+            <input form="signinup" type="password" required aria-required="true" name="password" id="signinup_password" placeholder="Password" autocomplete="current-password" inputmode="text" minlength="8">
+            <label for="signinup_password">Password</label>
+            <div class="showpassword" title="Show password"></div>
+        </div>';
         #RememberMe checkbox
-        $form .= '<div class="rememberme_div"><input form="registration" type="checkbox" name="rememberme" id="reg_form_rememberme"><label for="reg_form_rememberme">Remember me</label></div>';
+        $form .= '<div class="rememberme_div">
+            <input role="checkbox" aria-checked="false" form="signinup" type="checkbox" name="rememberme" id="rememberme">
+            <label for="rememberme">Remember me</label>
+        </div>';
         #Submit button
-        $form .= '<input form="registration" type="submit" name="submit" id="reg_form_submit" formaction="/uc/registration" formmethod="post" formtarget="_self" value="Register">';
+        $form .= '<input role="button" form="signinup" type="submit" name="submit" id="signinup_submit" formaction="'.$_SERVER['REQUEST_URI'].'" formmethod="post" formtarget="_self" value="Sign in/Join">';
         #Close form
         $form .= '</form>';
         return $form;

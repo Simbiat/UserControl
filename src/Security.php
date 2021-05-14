@@ -20,9 +20,9 @@ class Security
     public function __construct()
     {
         #Load Argon settings if argon.json exists
-        if (is_file(__DIR__.'/argon.json')) {
+        if (is_file(__DIR__.'/json/argon.json')) {
             #Read the file
-            $argon = json_decode(file_get_contents(__DIR__.'/argon.json'), true);
+            $argon = json_decode(file_get_contents(__DIR__.'/json/argon.json'), true);
             #Update settings, if they are present and comply with minimum requirements
             if (isset($argon['memory_cost']) && $argon['memory_cost'] >= 1024) {
                 $this->argonSettings['memory_cost'] = $argon['memory_cost'];
@@ -38,9 +38,9 @@ class Security
             $this->argonSettings = (new \Simbiat\usercontrol\NoDB)->argonCalc();
         }
         #Load AES settings
-        if (is_file(__DIR__.'/aes.json')) {
+        if (is_file(__DIR__.'/json/aes.json')) {
             #Read the file
-            $aes = json_decode(file_get_contents(__DIR__.'/aes.json'), true);
+            $aes = json_decode(file_get_contents(__DIR__.'/json/aes.json'), true);
             if (isset($aes['passphrase'])) {
                 $this->aesSettings = $aes;
             } else {
