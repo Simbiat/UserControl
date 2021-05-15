@@ -172,3 +172,31 @@ If you do - all you need to change are, basically, colors and styling of borders
 #signinup_password:not(:placeholder-shown)~.showpassword {
     display: block;
 }
+
+/*Style text of password requirement*/
+#password_req {
+    display: none;
+    text-align: left;
+}
+
+#signinup_password:focus~#password_req,
+#signinup_password:not(:placeholder-shown)~#password_req,
+#signinup_password:focus~.password_strength,
+#signinup_password:not(:placeholder-shown)~.password_strength {
+    display: block;
+}
+
+#signinup_password:valid~#password_req {
+    color: green;
+}
+
+#signinup_password:invalid~#password_req {
+    color: red;
+}
+
+/*Style password strength*/
+.password_strength {
+    color: red;
+    text-align: left;
+    display: none;
+}

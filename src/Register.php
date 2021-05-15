@@ -38,14 +38,16 @@ class Register
         </div>';
         #Email
         $form .= '<div class="float_label_div">
-            <input form="signinup" type="email" required aria-required="true" name="email" id="signinup_email" placeholder="your@email.com" autocomplete="email" inputmode="email" maxlength="320" pattern="^[a-zA-Z0-9.!#$%&\'*+\/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$">
-            <label for="signinup_email">your@email.com</label>
+            <input form="signinup" type="email" required aria-required="true" name="email" id="signinup_email" placeholder="Email or name" autocomplete="username" inputmode="email" minlength="1" maxlength="320" pattern="^[a-zA-Z0-9.!#$%&\'*+\/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$">
+            <label for="signinup_email">Email or name</label>
         </div>';
         #Password
         $form .= '<div class="float_label_div">
-            <input form="signinup" type="password" required aria-required="true" name="password" id="signinup_password" placeholder="Password" autocomplete="current-password" inputmode="text" minlength="8">
+            <input form="signinup" type="password" required aria-required="true" name="password" id="signinup_password" placeholder="Password" autocomplete="current-password" inputmode="text" minlength="8" pattern=".{8,}">
             <label for="signinup_password">Password</label>
             <div class="showpassword" title="Show password"></div>
+            <div id="password_req">Only password requirement: at least 8 symbols</div>
+            <div class="password_strength" title="Strength of the password. Strong passwords are advisable.">Weak</div>
         </div>';
         #RememberMe checkbox
         $form .= '<div class="rememberme_div">
