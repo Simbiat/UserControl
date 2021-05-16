@@ -17,7 +17,7 @@ If you do - all you need to change are, basically, colors and styling of borders
     text-align: center;
 }
 
-/*Fix size*/
+/*Limit width*/
 .float_label_div,
 [id^=signinup_] {
     /*Width corresonds to characters.
@@ -25,6 +25,10 @@ If you do - all you need to change are, basically, colors and styling of borders
     Longer than 65 characters is unnecessary, since we limit username at 64. 65 is used since with 64 there is a higher chacne of truncation*/
     min-width: 10ch;
     max-width: 65ch;
+}
+
+/*Limit height of inputs*/
+[id^=signinup_] {
     min-height: 24px;
     max-height: 48px;
 }
@@ -181,8 +185,8 @@ If you do - all you need to change are, basically, colors and styling of borders
 
 #signinup_password:focus~#password_req,
 #signinup_password:not(:placeholder-shown)~#password_req,
-#signinup_password:focus~.password_strength,
-#signinup_password:not(:placeholder-shown)~.password_strength {
+#signinup_password:focus~.pass_str_div,
+#signinup_password:not(:placeholder-shown)~.pass_str_div {
     display: block;
 }
 
@@ -195,8 +199,26 @@ If you do - all you need to change are, basically, colors and styling of borders
 }
 
 /*Style password strength*/
-.password_strength {
-    color: red;
-    text-align: left;
+.pass_str_div {
     display: none;
+    color: hsl(0, 4%, 95%);
+    text-align: left;
+}
+.password_weak {
+    color: red;
+    font-weight: 400;
+}
+.password_medium {
+    color: orange;
+    font-weight: 500;
+}
+.password_strong {
+    color: green;
+    font-weight: 700;
+}
+.password_very_strong {
+    font-weight: 900;
+    background: linear-gradient(to bottom, hsl(41, 33%, 72%) 22%, hsl(38, 38%, 28%) 24%, hsl(41, 33%, 72%) 26%, hsl(41, 33%, 72%) 27%, hsl(45, 100%, 85%) 40%, hsl(40, 59%, 50%) 78%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
 }

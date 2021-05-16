@@ -24,7 +24,18 @@ function passwordStrengthOnEvent()
     
     //Get element where we will be showing strength
     var strengthField = event.target.parentElement.querySelectorAll('.password_strength').item(0);
-    strengthField.innerHTML = passwordStrength(event.target.value);
+    //Get strength 
+    var strength = passwordStrength(event.target.value);
+    //Set text
+    strengthField.innerHTML = strength;
+    //Remove classes
+    strengthField.classList.remove('password_weak', 'password_medium', 'password_strong', 'password_very_strong');
+    //Add class
+    if (strength === 'very strong') {
+        strengthField.classList.add('password_very_strong');
+    } else {
+        strengthField.classList.add('password_'+strength);
+    }
 }
 
 //Actual check
@@ -76,14 +87,15 @@ function passwordStrength(password, extras = [])
     if (extras !== []) {
         
     }
+    //Return value based on points. Note, that order is important.
     if (points <= 2) {
-        return 'Weak';
+        return 'weak';
+    } else if (2 < points && points < 5) {
+        return 'medium';
+    } else if (5 < points && points < 9) {
+        return 'very strong';
     } else if (points = 5) {
-        return 'Strong';
-    } else if (points > 5 && points < 9) {
-        return 'Very strong';
-    } else if (points > 2 && points < 5) {
-        return 'Medium';
+        return 'strong';
     }
 }
 
@@ -97,6 +109,7 @@ function loginRadioCheck()
     var login = document.getElementById('signinup_email');
     var password = document.getElementById('signinup_password');
     var button = document.getElementById('signinup_submit');
+    var rememberme = document.getElementById('rememberme');
     //Adjust elements based on the toggle
     if (existUser.checked === true) {
         //Whether password field is required
@@ -115,6 +128,13 @@ function loginRadioCheck()
         ['focus', 'change', 'input'].forEach(function(e) {
             password.removeEventListener(e, passwordStrengthOnEvent);
         });
+        //Show or hide password field
+        password.parentElement.classList.remove('hideme');
+        //Show or hide remember me checkbox
+        rememberme.parentElement.classList.remove('hideme');
+        //Show or hide password requirements
+        document.getElementById('password_req').classList.add('hideme');
+        document.querySelectorAll('.pass_str_div').item(0).classList.add('hideme');
     }
     if (newUser.checked === true) {
         password.required = true;
@@ -126,6 +146,10 @@ function loginRadioCheck()
         ['focus', 'change', 'input'].forEach(function(e) {
             password.addEventListener(e, passwordStrengthOnEvent);
         });
+        password.parentElement.classList.remove('hideme');
+        rememberme.parentElement.classList.remove('hideme');
+        document.getElementById('password_req').classList.remove('hideme');
+        document.querySelectorAll('.pass_str_div').item(0).classList.remove('hideme');
     }
     if (forget.checked === true) {
         password.required = false;
@@ -137,6 +161,12 @@ function loginRadioCheck()
         ['focus', 'change', 'input'].forEach(function(e) {
             password.removeEventListener(e, passwordStrengthOnEvent);
         });
+        password.parentElement.classList.add('hideme');
+        rememberme.parentElement.classList.add('hideme');
+        document.getElementById('password_req').classList.add('hideme');
+        document.querySelectorAll('.pass_str_div').item(0).classList.add('hideme');
+        //Additionally uncheck rememberme as precaution
+        rememberme.checked = false;
     }
     //Adjust Aria values
     ariaNation(password);

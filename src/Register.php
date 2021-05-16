@@ -47,7 +47,9 @@ class Register
             <label for="signinup_password">Password</label>
             <div class="showpassword" title="Show password"></div>
             <div id="password_req">Only password requirement: at least 8 symbols</div>
-            <div class="password_strength" title="Strength of the password. Strong passwords are advisable.">Weak</div>
+            <div class="pass_str_div" title="Strength of the password. Strong passwords are advisable.">Password strength: 
+                <span class="password_strength">weak</span>
+            </div>
         </div>';
         #RememberMe checkbox
         $form .= '<div class="rememberme_div">
