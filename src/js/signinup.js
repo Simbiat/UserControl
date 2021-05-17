@@ -1,5 +1,7 @@
-//Regex for proper email
-var emailRegex = '[a-zA-Z0-9.!#$%&\'*+\/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*';
+//Regex for proper email. This is NOT JS Regex, thus it has doubled slashes.
+var emailRegex = '[a-zA-Z0-9.!#$%&\'*+\\/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*';
+//Regex for username. This is NOT JS Regex, thus it has doubled slashes.
+var userRegex = '[^\\/\\\\\\[\\]:;|=$%#@&\\(\\)\\{\\}!,+*?<>\\0\\t\\r\\n\\x00-\\x1F\\x7F\\x0b\\f\\x85\\v\\cY\\b]{1,64}';
 
 //Show or hide password. Should be attached to .showpassword class to "mousedown" event
 function showPassToggle()
@@ -119,7 +121,7 @@ function loginRadioCheck()
         //Autocomplete suggestion for login
         login.setAttribute('autocomplete', 'username');
         //Set pattern for login
-        login.setAttribute('pattern', '^(.{1,64}|('+emailRegex+')$');
+        login.setAttribute('pattern', '^('+userRegex+')|('+emailRegex+')$');
         //Enforce minimum length for password
         password.setAttribute('minlength', 8);
         //Adjust name of the button
@@ -155,7 +157,7 @@ function loginRadioCheck()
         password.required = false;
         password.removeAttribute('autocomplete');
         login.setAttribute('autocomplete', 'username');
-        login.setAttribute('pattern', '^(.{1,64}|('+emailRegex+')$');
+        login.setAttribute('pattern', '^('+userRegex+')|('+emailRegex+')$');
         password.removeAttribute('minlength');
         button.value = 'Remind';
         ['focus', 'change', 'input'].forEach(function(e) {

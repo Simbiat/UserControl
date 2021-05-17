@@ -204,7 +204,8 @@ If you do - all you need to change are, basically, colors and styling of borders
     color: hsl(0, 4%, 95%);
     text-align: left;
 }
-.password_weak {
+.password_weak,
+.password_strength {
     color: red;
     font-weight: 400;
 }
