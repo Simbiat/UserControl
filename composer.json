@@ -15,8 +15,8 @@
     ],
     "require": {
         "php": "^8",
-        "simbiat/database": "^2.0.0+20210311",
-        "simbiat/http20": "^1.5.4+20210507",
+        "simbiat/database": "^2",
+        "simbiat/http20": "^1",
         "phpmailer/phpmailer": "^6",
         "matomo/device-detector": "^4"
     },
