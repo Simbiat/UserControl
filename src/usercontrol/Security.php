@@ -146,7 +146,7 @@ class Security
                 #Check if they match. hash_equals helps mitigate timing attacks
                 if (hash_equals($_SESSION['CSRF'], $token) === true) {
                     #Check if HTTP Origin is among allowed ones, if we want restrict them.
-                    #Note that this will be applied to forms or APIs you want to restrict. For global restiction use \Simbiat\http20\headers->security()
+                    #Note that this will be applied to forms or APIs you want to restrict. For global restiction use \Simbiat\HTTP20\headers->security()
                     if (empty($allowOrigins) ||
                         #If origins are limited
                         (
@@ -182,7 +182,7 @@ class Security
             'referer' => @$_SERVER['HTTP_REFERER'],
         ]);
         #Send 403 error code in header, with option to force close connection
-        (new \Simbiat\http20\Headers)->clientReturn('403', $exit);
+        (new \Simbiat\HTTP20\Headers)->clientReturn('403', $exit);
         return false;
     }
     
