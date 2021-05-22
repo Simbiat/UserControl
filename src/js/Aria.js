@@ -1,11 +1,12 @@
-//Accessbility related functions
+//Accessibility related functions
 
 //Adding some aria attributes to input elements.
 function ariaNation(inputElement)
 {
+    "use strict";
     //Adjust aria-invalid based on whether input is valid or not
     inputElement.setAttribute('aria-invalid', !inputElement.validity.valid);
-    //Add aria-requried with value based on whether "requried" attribute is present
+    //Add aria-required with value based on whether "required" attribute is present
     if (inputElement.required === true) {
         inputElement.setAttribute('aria-required', true);
     } else {
@@ -26,5 +27,6 @@ function ariaNation(inputElement)
 //This should be attached to all input tags to "change" and "input" events. Preferably to "focus" as well.
 function ariaNationOnEvent(event)
 {
+    "use strict";
     ariaNation(event.target);
 }

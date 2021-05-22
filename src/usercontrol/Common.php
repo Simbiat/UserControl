@@ -2,17 +2,19 @@
 declare(strict_types=1);
 namespace Simbiat\usercontrol;
 
+use DeviceDetector\DeviceDetector;
+use DeviceDetector\Parser\Device\AbstractDeviceParser;
+use Simbiat\Database\Controller;
+
 trait Common
-{    
-    #Database prefix
-    public static string $dbprefix = 'uc__';
+{
     #Flag for SEO statistics
     public static bool $SEOtracking = true;
     #Cached DB controller
-    public static ?\Simbiat\Database\Controller $dbcontroller = NULL;
+    public static ?Controller $dbController = NULL;
     #Whether SMS OTP is supported
     public static bool $sms = false;
-    
+
     #Function to log actions
     private function log(string $type, string $action, mixed $extras = NULL): bool
     {
@@ -20,16 +22,16 @@ trait Common
             $extras = json_encode($extras, JSON_PRETTY_PRINT|JSON_INVALID_UTF8_SUBSTITUTE|JSON_UNESCAPED_UNICODE|JSON_PRESERVE_ZERO_FRACTION);
         }
         #Get IP
-        $ip = $this->getip();
+        $ip = $this->getIP();
         #Get username
         $userid = @$_SESSION['userid'];
         try {
             #Cache DB controller, if not done already
-            if (self::$dbcontroller === NULL) {
-                self::$dbcontroller = new \Simbiat\Database\Controller;
+            if (self::$dbController === NULL) {
+                self::$dbController = new Controller;
             }
-            self::$dbcontroller->query(
-                'INSERT INTO `'.self::$dbprefix.'logs` (`time`, `type`, `action`, `userid`, `ip`, `useragent`, `extra`) VALUES (current_timestamp(), (SELECT `typeid` FROM `'.self::$dbprefix.'log_types` WHERE `name`=:type), :action, :userid, :ip, :ua, :extras);',
+            self::$dbController->query(
+                'INSERT INTO `uc__logs` (`time`, `type`, `action`, `userid`, `ip`, `useragent`, `extra`) VALUES (current_timestamp(), (SELECT `typeid` FROM `uc__log_types` WHERE `name`=:type), :action, :userid, :ip, :ua, :extras);',
                 [
                     ':type' => $type,
                     ':action' => $action,
@@ -56,9 +58,9 @@ trait Common
             return false;
         }
     }
-    
+
     #Function to return IP
-    public function getip(): ?string
+    public function getIP(): ?string
     {
         #Check if behind proxy
         if (!empty($_SERVER['HTTP_X_FORWARDED_FOR'])) {
@@ -88,7 +90,7 @@ trait Common
         }
         return NULL;
     }
-    
+
     #Get Bot name, OS and Browser for user agent
     private function getUA(): ?array
     {
@@ -97,9 +99,9 @@ trait Common
             return NULL;
         }
         #Force full versions
-        \DeviceDetector\Parser\Device\AbstractDeviceParser::setVersionTruncation(\DeviceDetector\Parser\Device\AbstractDeviceParser::VERSION_TRUNCATION_NONE);
+        AbstractDeviceParser::setVersionTruncation(AbstractDeviceParser::VERSION_TRUNCATION_NONE);
         #Initialize device detector
-        $dd = (new \DeviceDetector\DeviceDetector($_SERVER['HTTP_USER_AGENT']));
+        $dd = (new DeviceDetector($_SERVER['HTTP_USER_AGENT']));
         $dd->parse();
         #Get bot name
         $bot = $dd->getBot();
@@ -126,4 +128,3 @@ trait Common
         return ['bot' => NULL, 'os' => ($os !== NULL ? substr($os, 0, 100) : NULL), 'client' => ($client !== NULL ? substr($client, 0, 100) : NULL)];
     }
 }
-?>

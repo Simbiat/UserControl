@@ -2,11 +2,14 @@
 declare(strict_types=1);
 namespace Simbiat\usercontrol;
 
+use Simbiat\Database\Controller;
+use Simbiat\HTTP20\Headers;
+
 class Security
-{    
+{
     #Attach common settings
-    use \Simbiat\usercontrol\Common;
-    
+    use Common;
+
     #Argon settings
     private array $argonSettings = [
         'memory_cost' => 1024,
@@ -15,8 +18,8 @@ class Security
         'threads' => 2,
     ];
     #AES settings
-    private array $aesSettings = [];
-    
+    private array $aesSettings;
+
     public function __construct()
     {
         #Load Argon settings if argon.json exists
@@ -35,7 +38,7 @@ class Security
             }
         } else {
             #Generate the settings
-            $this->argonSettings = (new \Simbiat\usercontrol\NoDB)->argonCalc();
+            $this->argonSettings = (new NoDB)->argonCalc();
         }
         #Load AES settings
         if (is_file(__DIR__.'/json/aes.json')) {
@@ -45,28 +48,32 @@ class Security
                 $this->aesSettings = $aes;
             } else {
                 #Generate the settings
-                $this->aesSettings = (new \Simbiat\usercontrol\NoDB)->genCrypto();
+                $this->aesSettings = (new NoDB)->genCrypto();
             }
         } else {
             #Generate the settings
-            $this->aesSettings = (new \Simbiat\usercontrol\NoDB)->genCrypto();
+            $this->aesSettings = (new NoDB)->genCrypto();
         }
     }
-    
+
     #Function to validate password
+
+    /**
+     * @throws \Exception
+     */
     public function passValid(int|string $id, string $password, string $hash): bool
     {
         #Cache DB controller, if not done already
-        if (self::$dbcontroller === NULL) {
-            self::$dbcontroller = new \Simbiat\Database\Controller;
+        if (self::$dbController === NULL) {
+            self::$dbController = new Controller;
         }
         #Validate password
         if (password_verify($password, $hash)) {
             #Check if it needs rehashing
             if (password_needs_rehash($hash, PASSWORD_ARGON2ID, $this->argonSettings)) {
-                #Rehash password and reset strieks (if any)
-                self::$dbcontroller->query(
-                    'UPDATE `'.self::$dbprefix.'users` SET `password`=:password, `strikes`=0 WHERE `userid`=:userid;',
+                #Rehash password and reset strikes (if any)
+                self::$dbController->query(
+                    'UPDATE `uc__users` SET `password`=:password, `strikes`=0 WHERE `userid`=:userid;',
                     [
                         ':userid' => [strval($id), 'string'],
                         ':password' => [$this->passHash($password), 'string'],
@@ -74,8 +81,8 @@ class Security
                 );
             } else {
                 #Reset strikes (if any)
-                self::$dbcontroller->query(
-                    'UPDATE `'.self::$dbprefix.'users` SET `strikes`=0 WHERE `userid`=:userid;',
+                self::$dbController->query(
+                    'UPDATE `uc__users` SET `strikes`=0 WHERE `userid`=:userid;',
                     [
                         ':userid' => [strval($id), 'string']
                     ]
@@ -84,19 +91,19 @@ class Security
             return true;
         } else {
             #Increase strike count
-            self::$dbcontroller->query(
-                'UPDATE `'.self::$dbprefix.'users` SET `strikes`=`strikes`+1 WHERE `userid`=:userid',
+            self::$dbController->query(
+                'UPDATE `uc__users` SET `strikes`=`strikes`+1 WHERE `userid`=:userid',
                 [':userid' => [strval($id), 'string']]);
             return false;
         }
     }
-    
+
     #Function to hash password. Used mostly as a wrapper in case of future changes
     public function passHash(string $password): string
     {
         return password_hash($password, PASSWORD_ARGON2ID, $this->argonSettings);
     }
-    
+
     #Function to encrypt stuff
     public function encrypt(string $data): string
     {
@@ -108,11 +115,11 @@ class Security
         #This is where tag will be written by OpenSSL
         $tag = '';
         #Ecnrypt and als get the tag
-        $encrypted = openssl_encrypt($data, 'AES-256-GCM', hex2bin($this->aesSettings['passphrase']), OPENSSL_RAW_DATA, $iv, $tag, '', 16);
+        $encrypted = openssl_encrypt($data, 'AES-256-GCM', hex2bin($this->aesSettings['passphrase']), OPENSSL_RAW_DATA, $iv, $tag);
         #Ecnrypt and prepend IV and tag
         return base64_encode($iv.$tag.$encrypted);
     }
-    
+
     #Function to decrypt stuff
     public function decrypt(string $data): string
     {
@@ -129,14 +136,14 @@ class Security
         $data = substr($data, 28);
         return openssl_decrypt($data, 'AES-256-GCM', hex2bin($this->aesSettings['passphrase']), OPENSSL_RAW_DATA, $iv, $tag);
     }
-    
+
     #Function to help protect against CSRF. Suggested to use for forms or APIs. Needs to be used before any writes to $_SESSION
-    public function antiCSRF(array $allowOrigins = [], bool $originRequried = false, bool $exit = true): bool
+    public function antiCSRF(array $allowOrigins = [], bool $originRequired = false, bool $exit = true): bool
     {
         #Get CSRF token
         $token = $_POST['CSRF'] ?? $_SERVER['HTTP_X_CSRF_TOKEN'] ?? $_SERVER['HTTP_X_XSRF_TOKEN'];
         #Get origin
-        #In some cases Origin can be empty. In case of forms we can try cehcking Referer instead.
+        #In some cases Origin can be empty. In case of forms we can try checking Referer instead.
         #In case of proxy is being used we should try taking the data from X-Forwarded-Host.
         $origin = $_SERVER['HTTP_X_FORWARDED_HOST'] ?? $_SERVER['HTTP_ORIGIN'] ?? $_SERVER['HTTP_REFERER'] ?? NULL;
         #Check if token is provided
@@ -146,16 +153,16 @@ class Security
                 #Check if they match. hash_equals helps mitigate timing attacks
                 if (hash_equals($_SESSION['CSRF'], $token) === true) {
                     #Check if HTTP Origin is among allowed ones, if we want restrict them.
-                    #Note that this will be applied to forms or APIs you want to restrict. For global restiction use \Simbiat\HTTP20\headers->security()
+                    #Note that this will be applied to forms or APIs you want to restrict. For global restriction use \Simbiat\HTTP20\headers->security()
                     if (empty($allowOrigins) ||
                         #If origins are limited
                         (
                             #Check if origin is not present and is enforced
-                            (empty($origin) && $originRequried === false) ||
+                            (empty($origin) && $originRequired === false) ||
                             #Check if origin is present
                             (!empty($origin) &&
                                 #Check if it's a valid origin and is allowed
-                                (preg_match('/'.self::originRegex.'/i', $origin) === 1 || in_array($origin, $allowOrigins))
+                                (preg_match('/'. Headers::originRegex.'/i', $origin) === 1 || in_array($origin, $allowOrigins))
                             )
                         )
                     ) {
@@ -182,11 +189,15 @@ class Security
             'referer' => @$_SERVER['HTTP_REFERER'],
         ]);
         #Send 403 error code in header, with option to force close connection
-        (new \Simbiat\HTTP20\Headers)->clientReturn('403', $exit);
+        (new Headers)->clientReturn('403', $exit);
         return false;
     }
-    
+
     #Function to generate CSRF token
+
+    /**
+     * @throws \Exception
+     */
     public function genCSRF(): string
     {
         $token = bin2hex(random_bytes(32));
@@ -194,4 +205,3 @@ class Security
         return $token;
     }
 }
-?>

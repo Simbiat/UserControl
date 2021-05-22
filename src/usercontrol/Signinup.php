@@ -2,19 +2,21 @@
 declare(strict_types=1);
 namespace Simbiat\usercontrol;
 
+use Simbiat\Database\Controller;
+
 class Signinup
-{    
+{
     #Attach common settings
-    use \Simbiat\usercontrol\Common;    
-    
+    use Common;
+
     public function __construct()
     {
         #Cache DB controller, if not done already
-        if (self::$dbcontroller === NULL) {
-            self::$dbcontroller = new \Simbiat\Database\Controller;
+        if (self::$dbController === NULL) {
+            self::$dbController = new Controller;
         }
     }
-    
+
     #Routing function for signing in or registering or reminding
     public function signinup(): bool
     {
@@ -26,32 +28,31 @@ class Signinup
             switch ($_POST['signinup']['type']) {
                 #Login
                 case 'member':
-                    
+
                     break;
                 #New user
                 case 'newuser':
-                    
+
                     break;
                 #Reminder
                 case 'forget':
-                    
+
                     break;
                 default:
                     return false;
-                    break;
             }
             return true;
         } else {
             return false;
         }
     }
-    
+
     #Function to register user
     public function register(): bool
     {
-        
+        return true;
     }
-    
+
     #Function to generate registration/sign_in form.
     public function form(): string
     {
@@ -84,7 +85,7 @@ class Signinup
             <label for="signinup_password">Password</label>
             <div class="showpassword" title="Show password"></div>
             <div id="password_req">Only password requirement: at least 8 symbols</div>
-            <div class="pass_str_div" title="Strength of the password. Strong passwords are advisable.">Password strength: 
+            <div class="pass_str_div" title="Strength of the password. Strong passwords are advisable.">Password strength:
                 <span class="password_strength">weak</span>
             </div>
         </div>';
@@ -100,4 +101,3 @@ class Signinup
         return $form;
     }
 }
-?>

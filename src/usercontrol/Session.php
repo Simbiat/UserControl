@@ -2,20 +2,22 @@
 declare(strict_types=1);
 namespace Simbiat\usercontrol;
 
+use Simbiat\Database\Controller;
+
 class Session implements \SessionHandlerInterface, \SessionIdInterface, \SessionUpdateTimestampHandlerInterface
-{    
+{
     #Attach common settings
-    use \Simbiat\usercontrol\Common;
-    
+    use Common;
+
     #Default life time for session in seconds (5 minutes)
-    private $sessionLife = 300;
-    
+    private int $sessionLife;
+
     #Cache of security object
-    private ?\Simbiat\usercontrol\Security $security = NULL;
-    
+    private ?Security $security = NULL;
+
     public function __construct(int $sessionLife = 300)
     {
-        #Set session name for easier inditification. '__Host-' prefix signals to the browser that both the Path=/ and Secure attributes are required, so that subdomains cannot modify the sessino cookie.
+        #Set session name for easier identification. '__Host-' prefix signals to the browser that both the Path=/ and Secure attributes are required, so that subdomains cannot modify the session cookie.
         session_name('__Host-sess_'.preg_replace('/[^a-zA-Z0-9\-_]/', '', $_SERVER['HTTP_HOST']));
         #Additionally limit cookie to default, that is current domain only. If we manually set it to something, browsers will ignore the cookie due to __Host-' prefix.
         #ini_set('session.cookie_domain', '');
@@ -55,42 +57,45 @@ class Session implements \SessionHandlerInterface, \SessionIdInterface, \Session
         #Allow upload progress tracking
         ini_set('session.upload_progress.enabled', 'On');
         ini_set('session.upload_progress.cleanup', 'On');
-        #Since we are modifying data available even for new sessions (on 1st read), leaving lazy_write On (default) will rpevent from session data to be written, unless something else is added, which may not happen. Thus turning it off. This can reduce performance a little bit, but this will also help with mitigations of session fixation/hijacking.
+        #Since we are modifying data available even for new sessions (on 1st read), leaving lazy_write On (default) will prevent from session data to be written, unless something else is added, which may not happen. Thus turning it off. This can reduce performance a little bit, but this will also help with mitigations of session fixation/hijacking.
         ini_set('session.lazy_write', 'Off');
         #Cache DB controller, if not done already
-        if (self::$dbcontroller === NULL) {
+        if (self::$dbController === NULL) {
             try {
-                self::$dbcontroller = new \Simbiat\Database\Controller;
-                $this->security = new \Simbiat\usercontrol\Security;
+                self::$dbController = new Controller;
+                $this->security = new Security;
             } catch (\Exception $e) {
                 #Do nothing, session will fail to be opened on `open` call
             }
         }
     }
-    
+
     ##########################
     #\SessionHandlerInterface#
     ##########################
-    public function open(string $path, string $name)
+    public function open(string $path, string $name): bool
     {
         #If controller was initialized - session is ready
-        if (self::$dbcontroller === NULL) {
+        if (self::$dbController === NULL) {
             return false;
         } else {
             return true;
         }
     }
-    
-    public function close()
+
+    public function close(): bool
     {
         #No need to do anything at this point
         return true;
     }
-    
+
+    /**
+     * @throws \Exception
+     */
     public function read(string $id): string
     {
         #Get session data
-        $data = self::$dbcontroller->selectValue('SELECT `data` FROM `'.self::$dbprefix.'sessions` WHERE `sessionid` = :id AND `time` > DATE_SUB(UTC_TIMESTAMP(), INTERVAL :life SECOND)', [':id' => $id, ':life' => [$this->sessionLife, 'int']]);
+        $data = self::$dbController->selectValue('SELECT `data` FROM `uc__sessions` WHERE `sessionid` = :id AND `time` > DATE_SUB(UTC_TIMESTAMP(), INTERVAL :life SECOND)', [':id' => $id, ':life' => [$this->sessionLife, 'int']]);
         if (!empty($data)) {
             #Decrypt data
             $data = $this->security->decrypt($data);
@@ -110,7 +115,10 @@ class Session implements \SessionHandlerInterface, \SessionIdInterface, \Session
         }
         return serialize($data);
     }
-    
+
+    /**
+     * @throws \Exception
+     */
     public function write(string $id, string $data): bool
     {
         #Deserialize to check if UserAgent data is present
@@ -124,14 +132,14 @@ class Session implements \SessionHandlerInterface, \SessionIdInterface, \Session
         #Cache username (to prevent reading from Session)
         $username = (!empty($data['UA']['bot']) ? $data['UA']['bot'] : ($data['username'] ?? NULL));
         #Get IP
-        $ip = $this->getip();
+        $ip = $this->getIP();
         #Prepare empty array
         $queries = [];
         #Update SEO related tables
         if (self::$SEOtracking === true && empty($data['UA']['bot']) && $ip !== NULL) {
             #Update unique visitors
             $queries[] = [
-                'INSERT INTO `'.self::$dbprefix.'seo_visitors` SET `ip`=:ip, `os`=:os, `client`=:client ON DUPLICATE KEY UPDATE `views`=`views`+1;',
+                'INSERT INTO `uc__seo_visitors` SET `ip`=:ip, `os`=:os, `client`=:client ON DUPLICATE KEY UPDATE `views`=`views`+1;',
                 [
                     #Data that makes this visitor unique
                     ':ip' => [$ip, 'string'],
@@ -147,11 +155,11 @@ class Session implements \SessionHandlerInterface, \SessionIdInterface, \Session
             ];
             #Update page views
             $queries[] = [
-                'INSERT INTO `'.self::$dbprefix.'seo_pageviews` SET `page`=:page, `referer`=:referer, `ip`=:ip, `os`=:os, `client`=:client ON DUPLICATE KEY UPDATE `views`=`views`+1;',
+                'INSERT INTO `uc__seo_pageviews` SET `page`=:page, `referer`=:referer, `ip`=:ip, `os`=:os, `client`=:client ON DUPLICATE KEY UPDATE `views`=`views`+1;',
                 [
                     #What page is being viewed
                     ':page' => rawurldecode((empty($_SERVER['REQUEST_URI']) ? 'index.php' : substr($_SERVER['REQUEST_URI'], 0, 256))),
-                    #Optional refere (if sent from other sources)
+                    #Optional referer (if sent from other sources)
                     ':referer' => [
                         (empty($_SERVER['HTTP_REFERER']) ? '' : substr($_SERVER['HTTP_REFERER'], 0, 256)),
                         'string',
@@ -171,7 +179,7 @@ class Session implements \SessionHandlerInterface, \SessionIdInterface, \Session
         }
         #Write session data
         $queries[] = [
-            'INSERT INTO `'.self::$dbprefix.'sessions` SET `sessionid`=:id, `bot`=:bot, `ip`=:ip, `os`=:os, `client`=:client, `username`=:username, `page`=:page, `data`=:data ON DUPLICATE KEY UPDATE `time`=UTC_TIMESTAMP(), `bot`=:bot, `ip`=:ip, `os`=:os, `client`=:client, `username`=:username, `page`=:page, `data`=:data;',
+            'INSERT INTO `uc__sessions` SET `sessionid`=:id, `bot`=:bot, `ip`=:ip, `os`=:os, `client`=:client, `username`=:username, `page`=:page, `data`=:data ON DUPLICATE KEY UPDATE `time`=UTC_TIMESTAMP(), `bot`=:bot, `ip`=:ip, `os`=:os, `client`=:client, `username`=:username, `page`=:page, `data`=:data;',
             [
                 ':id' => $id,
                 #Whether this is a bot
@@ -203,23 +211,29 @@ class Session implements \SessionHandlerInterface, \SessionIdInterface, \Session
                 ],
             ],
         ];
-        return self::$dbcontroller->query($queries);
+        return self::$dbController->query($queries);
     }
-    
+
+    /**
+     * @throws \Exception
+     */
     public function destroy(string $id): bool
     {
-        return self::$dbcontroller->query('DELETE FROM `'.self::$dbprefix.'sessions` WHERE `sessionid`=:id', [':id'=>$id]);
+        return self::$dbController->query('DELETE FROM `uc__sessions` WHERE `sessionid`=:id', [':id'=>$id]);
     }
-    
+
+    /**
+     * @throws \Exception
+     */
     public function gc(int $max_lifetime): bool
     {
-        if (self::$dbcontroller->query('DELETE FROM `'.self::$dbprefix.'sessions` WHERE `time` <= DATE_SUB(UTC_TIMESTAMP(), INTERVAL :life SECOND);', [':life' => [$this->sessionLife, 'int']])) {
+        if (self::$dbController->query('DELETE FROM `uc__sessions` WHERE `time` <= DATE_SUB(UTC_TIMESTAMP(), INTERVAL :life SECOND);', [':life' => [$this->sessionLife, 'int']])) {
             return true;
         } else {
             return false;
         }
     }
-    
+
     #####################
     #\SessionIdInterface#
     #####################
@@ -227,26 +241,31 @@ class Session implements \SessionHandlerInterface, \SessionIdInterface, \Session
     {
         return session_create_id();
     }
-    
+
     #########################################
     #\SessionUpdateTimestampHandlerInterface#
     #########################################
+    /**
+     * @throws \Exception
+     */
     public function validateId(string $id): bool
     {
         #Get ID
-        $sessionid = self::$dbcontroller->selectValue('SELECT `sessionid` FROM `'.self::$dbprefix.'sessions` WHERE `sessionid` = :id;', [':id'=>$id]);
+        $sessionId = self::$dbController->selectValue('SELECT `sessionId` FROM `uc__sessions` WHERE `sessionId` = :id;', [':id'=>$id]);
         #Check if it was returned
-        if (empty($sessionid)) {
+        if (empty($sessionId)) {
             #No such session exists
             return false;
         }
         #Validate session id using hash_equals to mitigate timing attacks
-        return hash_equals($sessionid, $id);
+        return hash_equals($sessionId, $id);
     }
-    
+
+    /**
+     * @throws \Exception
+     */
     public function updateTimestamp(string $id, string $data): bool
     {
-        return self::$dbcontroller->query('UPDATE `'.self::$dbprefix.'sessions` SET `time`= UTC_TIMESTAMP() WHERE `sessionid` = :id;', [':id'=>$id]);
+        return self::$dbController->query('UPDATE `uc__sessions` SET `time`= UTC_TIMESTAMP() WHERE `sessionid` = :id;', [':id'=>$id]);
     }
 }
-?>

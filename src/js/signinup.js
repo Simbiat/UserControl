@@ -1,15 +1,16 @@
 //Regex for proper email. This is NOT JS Regex, thus it has doubled slashes.
-var emailRegex = '[a-zA-Z0-9.!#$%&\'*+\\/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*';
+const emailRegex = '[a-zA-Z0-9.!#$%&\'*+\\/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*';
 //Regex for username. This is NOT JS Regex, thus it has doubled slashes.
-var userRegex = '[^\\/\\\\\\[\\]:;|=$%#@&\\(\\)\\{\\}!,+*?<>\\0\\t\\r\\n\\x00-\\x1F\\x7F\\x0b\\f\\x85\\v\\cY\\b]{1,64}';
+const userRegex = '[^\\/\\\\\\[\\]:;|=$%#@&\\(\\)\\{\\}!,+*?<>\\0\\t\\r\\n\\x00-\\x1F\\x7F\\x0b\\f\\x85\\v\\cY\\b]{1,64}';
 
 //Show or hide password. Should be attached to .showpassword class to "mousedown" event
-function showPassToggle()
+function showPassToggle(event)
 {
+    "use strict";
     //Prevent focus stealing
     event.preventDefault();
-    var eyeIcon = event.target;
-    var passField = eyeIcon.parentElement.getElementsByTagName('input').item(0);
+    let eyeIcon = event.target;
+    let passField = eyeIcon.parentElement.getElementsByTagName('input').item(0);
     if (passField.type === 'password') {
         passField.type = 'text';
         eyeIcon.title = 'Hide password';
@@ -20,14 +21,15 @@ function showPassToggle()
 }
 
 //Password strength check. Purely as advise, nothing more.
-function passwordStrengthOnEvent()
+function passwordStrengthOnEvent(event)
 {
+    "use strict";
     //Attempt to get extra values to check against
-    
+
     //Get element where we will be showing strength
-    var strengthField = event.target.parentElement.querySelectorAll('.password_strength').item(0);
-    //Get strength 
-    var strength = passwordStrength(event.target.value);
+    let strengthField = event.target.parentElement.querySelectorAll('.password_strength').item(0);
+    //Get strength
+    let strength = passwordStrength(event.target.value);
     //Set text
     strengthField.innerHTML = strength;
     //Remove classes
@@ -43,8 +45,9 @@ function passwordStrengthOnEvent()
 //Actual check
 function passwordStrength(password, extras = [])
 {
-    //Assing points for the password
-    var points = 0;
+    "use strict";
+    //Assigning points for the password
+    let points = 0;
     //Check that it's long enough
     if (/.{8,}/.test(password) === true) {
         points++;
@@ -87,7 +90,7 @@ function passwordStrength(password, extras = [])
     }
     //Check against extra values. If password contains any of them - reduce points
     if (extras !== []) {
-        
+
     }
     //Return value based on points. Note, that order is important.
     if (points <= 2) {
@@ -96,22 +99,23 @@ function passwordStrength(password, extras = [])
         return 'medium';
     } else if (5 < points && points < 9) {
         return 'very strong';
-    } else if (points = 5) {
+    } else if (points === 5) {
         return 'strong';
     }
 }
 
-//Handle some adjustements when using radio-button switch
+//Handle some adjustments when using radio-button switch
 function loginRadioCheck()
 {
+    "use strict";
     //Assign actual elements to variables
-    var existUser = document.getElementById('radio_existuser');
-    var newUser = document.getElementById('radio_newuser');
-    var forget = document.getElementById('radio_forget');
-    var login = document.getElementById('signinup_email');
-    var password = document.getElementById('signinup_password');
-    var button = document.getElementById('signinup_submit');
-    var rememberme = document.getElementById('rememberme');
+    let existUser = document.getElementById('radio_existuser');
+    let newUser = document.getElementById('radio_newuser');
+    let forget = document.getElementById('radio_forget');
+    let login = document.getElementById('signinup_email');
+    let password = document.getElementById('signinup_password');
+    let button = document.getElementById('signinup_submit');
+    let rememberme = document.getElementById('rememberme');
     //Adjust elements based on the toggle
     if (existUser.checked === true) {
         //Whether password field is required
@@ -123,7 +127,7 @@ function loginRadioCheck()
         //Set pattern for login
         login.setAttribute('pattern', '^('+userRegex+')|('+emailRegex+')$');
         //Enforce minimum length for password
-        password.setAttribute('minlength', 8);
+        password.setAttribute('minlength', '8');
         //Adjust name of the button
         button.value = 'Sign in';
         //Add or remove listeners for password strength
@@ -143,7 +147,7 @@ function loginRadioCheck()
         password.setAttribute('autocomplete', 'new-password');
         login.setAttribute('autocomplete', 'email');
         login.setAttribute('pattern', '^'+emailRegex+'$');
-        password.setAttribute('minlength', 8);
+        password.setAttribute('minlength', '8');
         button.value = 'Join';
         ['focus', 'change', 'input'].forEach(function(e) {
             password.addEventListener(e, passwordStrengthOnEvent);

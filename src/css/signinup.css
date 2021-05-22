@@ -20,9 +20,9 @@ If you do - all you need to change are, basically, colors and styling of borders
 /*Limit width*/
 .float_label_div,
 [id^=signinup_] {
-    /*Width corresonds to characters.
+    /*Width corresponds to characters.
     10 looks the lowest number that makes placeholders more or less readable.
-    Longer than 65 characters is unnecessary, since we limit username at 64. 65 is used since with 64 there is a higher chacne of truncation*/
+    Longer than 65 characters is unnecessary, since we limit username at 64. 65 is used since with 64 there is a higher chance of truncation*/
     min-width: 10ch;
     max-width: 65ch;
 }
@@ -56,7 +56,7 @@ If you do - all you need to change are, basically, colors and styling of borders
     box-shadow: 1px 1px 10px hsla(182, 100%, 32%, 1), -1px -1px 10px hsla(182, 100%, 32%, 1);
 }
 
-/*Style invalid input. Ideally should be repalce by :user-invalid but it's currently only supported by Firefox*/
+/*Style invalid input. Ideally should be replace by :user-invalid but it's currently only supported by Firefox*/
 [id^=signinup_]:invalid:focus:not(:placeholder-shown),
 [id^=signinup_][required]:invalid:focus:placeholder-shown {
     border-color: red;
