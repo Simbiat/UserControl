@@ -6,7 +6,7 @@ const userRegex = '[^\\/\\\\\\[\\]:;|=$%#@&\\(\\)\\{\\}!,+*?<>\\0\\t\\r\\n\\x00-
 //Show or hide password. Should be attached to .showpassword class to "mousedown" event
 function showPassToggle(event)
 {
-    "use strict";
+    'use strict';
     //Prevent focus stealing
     event.preventDefault();
     let eyeIcon = event.target;
@@ -23,7 +23,7 @@ function showPassToggle(event)
 //Password strength check. Purely as advise, nothing more.
 function passwordStrengthOnEvent(event)
 {
-    "use strict";
+    'use strict';
     //Attempt to get extra values to check against
 
     //Get element where we will be showing strength
@@ -43,9 +43,9 @@ function passwordStrengthOnEvent(event)
 }
 
 //Actual check
+'use strict';
 function passwordStrength(password, extras = [])
 {
-    "use strict";
     //Assigning points for the password
     let points = 0;
     //Check that it's long enough
@@ -107,7 +107,7 @@ function passwordStrength(password, extras = [])
 //Handle some adjustments when using radio-button switch
 function loginRadioCheck()
 {
-    "use strict";
+    'use strict';
     //Assign actual elements to variables
     let existUser = document.getElementById('radio_existuser');
     let newUser = document.getElementById('radio_newuser');

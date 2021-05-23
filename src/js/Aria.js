@@ -3,7 +3,7 @@
 //Adding some aria attributes to input elements.
 function ariaNation(inputElement)
 {
-    "use strict";
+    'use strict';
     //Adjust aria-invalid based on whether input is valid or not
     inputElement.setAttribute('aria-invalid', !inputElement.validity.valid);
     //Add aria-required with value based on whether "required" attribute is present
@@ -27,6 +27,6 @@ function ariaNation(inputElement)
 //This should be attached to all input tags to "change" and "input" events. Preferably to "focus" as well.
 function ariaNationOnEvent(event)
 {
-    "use strict";
+    'use strict';
     ariaNation(event.target);
 }
