@@ -201,7 +201,7 @@ class Security
     public function genCSRF(): string
     {
         $token = bin2hex(random_bytes(32));
-        header('X-CSRF-Token: '.$token, true);
+        @header('X-CSRF-Token: '.$token, true);
         return $token;
     }
 }
