@@ -141,7 +141,7 @@ class Security
     public function antiCSRF(array $allowOrigins = [], bool $originRequired = false, bool $exit = true): bool
     {
         #Get CSRF token
-        $token = $_POST['CSRF'] ?? $_SERVER['HTTP_X_CSRF_TOKEN'] ?? $_SERVER['HTTP_X_XSRF_TOKEN'];
+        $token = $_POST['X-CSRFToken'] ?? $_SERVER['HTTP_X_CSRF_TOKEN'] ?? $_SERVER['HTTP_X_XSRF_TOKEN'];
         #Get origin
         #In some cases Origin can be empty. In case of forms we can try checking Referer instead.
         #In case of proxy is being used we should try taking the data from X-Forwarded-Host.

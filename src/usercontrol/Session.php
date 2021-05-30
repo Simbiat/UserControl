@@ -112,6 +112,8 @@ class Session implements \SessionHandlerInterface, \SessionIdInterface, \Session
         #Add CSRF token, if missing
         if (empty($data['CSRF'])) {
             $data['CSRF'] = $this->security->genCSRF();
+        } else {
+            @header('X-CSRF-Token: '.$data['CSRF'], true);
         }
         return serialize($data);
     }
@@ -127,8 +129,12 @@ class Session implements \SessionHandlerInterface, \SessionIdInterface, \Session
             #Add UserAgent data
             $data['UA'] = $this->getUA();
         }
-        #Force regeneration of CSRF token
-        $data['CSRF'] = $this->security->genCSRF();
+        #Force generation of CSRF token if missing
+        if (empty($data['CSRF'])) {
+            $data['CSRF'] = $this->security->genCSRF();
+        } else {
+            @header('X-CSRF-Token: '.$data['CSRF'], true);
+        }
         #Cache username (to prevent reading from Session)
         $username = (!empty($data['UA']['bot']) ? $data['UA']['bot'] : ($data['username'] ?? NULL));
         #Get IP
